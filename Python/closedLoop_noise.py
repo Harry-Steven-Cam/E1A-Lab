@@ -10,11 +10,11 @@ R1 = "100K"  # str(input('R1 (k): ')+'K')
 R2 = "100K"  # str(input('R2 (k): ')+'K')
 C = "1000pF"  # str(input('C: '))
 
-PC = 1
+PC = 2
 R3 = 15_000
 C2 = 0.01e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
-noise=000
+noise=0
 
 
 def data_save(name, data, data_name):
@@ -55,8 +55,8 @@ def set_awg(freq):
     picoscope.awg(
         waveform="square",
         frequency=freq,
-        peak_to_peak=1,
-        offset=-1,#TMPPPPP
+        peak_to_peak=0.6,
+        offset=-0.6,#TMPPPPP
     )
     # print("awg set")
 
