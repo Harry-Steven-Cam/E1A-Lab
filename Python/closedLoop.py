@@ -7,12 +7,6 @@ import scipy
 import winsound
 import time as t
 
-winsound.Beep(1500, 1000)
-t.sleep(0.01)
-winsound.Beep(1500, 1000)
-t.sleep(0.01)
-winsound.Beep(1500, 1250)
-
 R1 = "100K"  # str(input('R1 (k): ')+'K')
 R2 = "100K"  # str(input('R2 (k): ')+'K')
 C = "1000pF"  # str(input('C: '))
@@ -30,12 +24,10 @@ def data_save(name, x, xname, y, yname, z, zname, t, tname, k, kname):
 
 
 picoscope.picoscope_open()
-time = 0.005
-samplerate = 1e8
+
 picoscope.scope_prepare(
-    capture_time=time,  # Traces will be captured over this time period (in seconds).
-    samples=time
-    * samplerate,  # Number of samples to capture over the capture_time period.
+    capture_time=0.05,  # Traces will be captured over this time period (in seconds).
+    samples=500_000,  # Number of samples to capture over the capture_time period.
     a_range=10,  # Voltage range for channel A (in volts).
     a_probe="x1",  # Probe attenuation for channel A (x1 is the default).
     b_range=10,
@@ -63,7 +55,7 @@ def set_awg(freq):
     )
     # print("awg set")
 
-def plot(x,y,name,xname,yname,save):
+def plot(x,y,name,xname,yname,save,show=True):
     plot_styles = {"marker": "x", "linestyle": "none"}
     plt.plot(x, y,**plot_styles)
     plt.xlabel(xname)
@@ -71,19 +63,24 @@ def plot(x,y,name,xname,yname,save):
     plt.grid(True)
     os.makedirs("./images", exist_ok=True)
     if save == True:
-        plt.plot()
-    plt.savefig(f"./images/{name}.png")
+        plt.savefig(f"./images/{name}.png")
+    if show == True:
+        plt.show()
     plt.clf()
 
 
 def phaseFinder(awg_out, vco_out, time, freq):
     def rising_edges(signal):
         threshold = (np.max(signal) + np.min(signal)) / 2
-        edges = np.where((signal[:-1] < threshold) & (signal[1:] >= threshold))[0]
+        edges = np.where(
+            (signal[:-1] < threshold) &
+            (signal[1:] >= threshold)
+        )[0]
 
         # Interpolate the threshold crossing time
         t_edges = time[edges] + (
-            (threshold - signal[edges]) / (signal[edges + 1] - signal[edges])
+            (threshold - signal[edges]) /
+            (signal[edges + 1] - signal[edges])
         ) * (time[edges + 1] - time[edges])
 
         return t_edges
@@ -91,17 +88,23 @@ def phaseFinder(awg_out, vco_out, time, freq):
     awg_edges = rising_edges(awg_out)
     vco_edges = rising_edges(vco_out)
 
-    if len(awg_edges) == 0 or len(vco_edges) == 0:
+    n = min(len(awg_edges), len(vco_edges))
+
+    if n == 0 or freq <= 0:
         return np.nan
 
-    # Time difference between the first rising edges
-    delay_total = 0
-    for i in range(min(len(vco_edges), len(awg_edges))):
-        delay_total += vco_edges[i] - awg_edges[i]
-    delay = delay_total / len(awg_edges)
+    # Calculate time differences between corresponding rising edges
+    delays = vco_edges[:n] - awg_edges[:n]
 
-    # Convert delay to phase and wrap into [-180, 180) degrees
-    phase = delay * freq
+    # Wrap delays into [-T/2, T/2), where T is the signal period
+    period = 1 / freq
+    delays = (delays + period / 2) % period - period / 2
+
+    # Average the delays
+    delay = np.mean(delays)
+
+    # Convert delay to phase in degrees and wrap into [-180, 180)
+    phase = (delay * freq * 360 + 180) % 360 - 180
 
     return phase
 
@@ -155,13 +158,9 @@ for freq in frequencies:
 
 ratio = [awg_freq[i] / vco_freq[i] for i in range(len(awg_freq))]
 
-# print("Final frequencies:", frequency)
-winsound.Beep(2500, 500)
-# t.sleep(0.001)
-winsound.Beep(2500, 500)
 
 def namer(data_type):
-    name = f"Closed_loop_PC1_{data_type}_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)"
+    return f"Closed_loop_PC1_{data_type}_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)"
 
 plot(awg_freq,phase_diff,namer('phase_diff'),'awg_freq','phase_diff',False)
 plot(awg_freq,ratio,namer('ratio'),'awg_freq','ratio',False)
@@ -171,7 +170,7 @@ R3=15_000
 C2=0.1e-6
 
 wc = round(1/(np.pi*2*R3*C2),-3)
-
+'''
 data_save(
     namer(f'all_data_wc={wc}'),
     time,
@@ -185,7 +184,7 @@ data_save(
     phase_diff,
     "phase_diff",
 )
-
+'''
 
 picoscope.picoscope_close()
 print(R1)

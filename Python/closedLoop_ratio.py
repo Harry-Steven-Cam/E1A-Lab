@@ -95,8 +95,8 @@ def freqFinder(voltage,time):
 print("running")
 
 steps = 100
-top_limit=152_000
-bottom_limit=145_000
+top_limit=200_000
+bottom_limit=0
 frequencies = np.linspace(bottom_limit, top_limit, steps)
 awg_freq=[]
 vco_freq=[]
@@ -130,9 +130,9 @@ plt.xlabel("awg_freq (KHz)")
 #plt.ylim(bottom=0)
 plt.grid(True)
 os.makedirs("./images", exist_ok=True)
-plt.savefig(f"./images/Closed_loop_PC1_locking_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz).png")
+#plt.savefig(f"./images/Closed_loop_PC1_locking_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz).png")
 plt.show()
-data_save(f"Closed_loop_PC1_locking_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)", awg_freq, "awg_freq", vco_freq, "vco_freq")
+#data_save(f"Closed_loop_PC1_locking_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)", awg_freq, "awg_freq", vco_freq, "vco_freq")
 
 
 picoscope.picoscope_close()
