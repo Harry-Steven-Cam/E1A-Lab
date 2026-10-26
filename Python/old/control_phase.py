@@ -1,5 +1,5 @@
 import pll_ps2000a as picoscope
-import arduino as arduino
+import Python.old.arduino as arduino
 
 picoscope.picoscope_open()
 

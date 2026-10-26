@@ -1,5 +1,5 @@
 import pll_ps2000a as picoscope
-import arduino as arduino
+import Python.old.arduino as arduino
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
