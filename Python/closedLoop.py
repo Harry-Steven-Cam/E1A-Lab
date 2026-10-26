@@ -55,9 +55,10 @@ def set_awg(freq):
     )
     # print("awg set")
 
-def plot(x,y,name,xname,yname,save,show=True):
+
+def plot(x, y, name, xname, yname, save, show=True):
     plot_styles = {"marker": "x", "linestyle": "none"}
-    plt.plot(x, y,**plot_styles)
+    plt.plot(x, y, **plot_styles)
     plt.xlabel(xname)
     plt.ylabel(yname)
     plt.grid(True)
@@ -72,15 +73,11 @@ def plot(x,y,name,xname,yname,save,show=True):
 def phaseFinder(awg_out, vco_out, time, freq):
     def rising_edges(signal):
         threshold = (np.max(signal) + np.min(signal)) / 2
-        edges = np.where(
-            (signal[:-1] < threshold) &
-            (signal[1:] >= threshold)
-        )[0]
+        edges = np.where((signal[:-1] < threshold) & (signal[1:] >= threshold))[0]
 
         # Interpolate the threshold crossing time
         t_edges = time[edges] + (
-            (threshold - signal[edges]) /
-            (signal[edges + 1] - signal[edges])
+            (threshold - signal[edges]) / (signal[edges + 1] - signal[edges])
         ) * (time[edges + 1] - time[edges])
 
         return t_edges
@@ -134,8 +131,8 @@ def freqFinder(voltage, time):
 # picoscope.scope_monitor()
 print("running")
 
-steps = 100
-top_limit = 100_000
+steps = 200
+top_limit = 60_000
 bottom_limit = 0  # 10_000
 frequencies = np.linspace(bottom_limit, top_limit, steps)
 awg_freq = []
@@ -158,35 +155,39 @@ for freq in frequencies:
 
 ratio = [awg_freq[i] / vco_freq[i] for i in range(len(awg_freq))]
 
+PC = 1
+R3 = 15_000
+C2 = 0.1e-6
+fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
+
 
 def namer(data_type):
-    return f"Closed_loop_PC1_{data_type}_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)"
+    return f"Closed_loop_PC{PC}_{data_type}_R1={R1}_R2={R2}_C={C}_R3={R3/1000}K_C2={C2*1e9}nF_fc={fc}Hz_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)"
 
-plot(awg_freq,phase_diff,namer('phase_diff'),'awg_freq','phase_diff',False)
-plot(awg_freq,ratio,namer('ratio'),'awg_freq','ratio',False)
-plot(awg_freq,vco_freq,namer('fvf'),'awg_freq','vco_freq',False)
+plot(awg_freq, phase_diff, namer("phase_diff"), "awg_freq", "phase_diff", True)
+plot(awg_freq, ratio, namer("ratio"), "awg_freq", "ratio", True)
+plot(awg_freq, vco_freq, namer("fvf"), "awg_freq", "vco_freq", True)
 
-R3=15_000
-C2=0.1e-6
 
-wc = round(1/(np.pi*2*R3*C2),-3)
-'''
-data_save(
-    namer(f'all_data_wc={wc}'),
-    time,
-    "time",
-    awg_freq,
-    "awg_freq",
-    vco_freq,
-    "vco_freq",
-    ratio,
-    "ratio",
-    phase_diff,
-    "phase_diff",
-)
-'''
+save_data = True
+if save_data:
+    data_save(
+        namer(f"all_data"),
+        time,
+        "time",
+        awg_freq,
+        "awg_freq",
+        vco_freq,
+        "vco_freq",
+        ratio,
+        "ratio",
+        phase_diff,
+        "phase_diff",
+    )
+
 
 picoscope.picoscope_close()
 print(R1)
 print(R2)
 print(C)
+print(fc)
