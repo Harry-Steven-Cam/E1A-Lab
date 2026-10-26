@@ -14,7 +14,7 @@ PC = 2
 R3 = 15_000
 C2 = 0.01e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
-noise=0
+noise=500
 
 
 def data_save(name, data, data_name):
@@ -185,11 +185,6 @@ for freq in frequencies:
 
 ratio = [awg_freq[i] / vco_freq[i] for i in range(len(awg_freq))]
 
-PC = 2
-R3 = 15_000
-C2 = 0.01e-6
-fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
-noise=000
 
 
 def namer(data_type):
