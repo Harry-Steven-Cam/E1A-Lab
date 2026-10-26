@@ -9,8 +9,8 @@ import time as t
 
 #winsound.Beep(2500, 1000)
 
-R1 = '1000K' #str(input('R1 (k): ')+'K')
-R2 = 'infiniteK' #str(input('R2 (k): ')+'K')
+R1 = '100K' #str(input('R1 (k): ')+'K')
+R2 = '100K' #str(input('R2 (k): ')+'K')
 C = '1000pF' #str(input('C: '))
 
 def data_save(name, x, xname, y, yname):
