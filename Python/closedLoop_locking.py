@@ -52,7 +52,7 @@ picoscope.scope_prepare(
     b_name="COMP",
     c_name="Trig",
     d_name="PC",
-    trigger_channel="A",  # CHANGED: trigger on the AWG signal itself so the window starts at turn-on
+    trigger_channel="B",  # CHANGED: trigger on the AWG signal itself so the window starts at turn-on
     trigger_direction="r",  # CHANGED: rising edge (idle -1 V -> upper square level -0.5 V)
     trigger_level=-0.75,  # CHANGED: midway between the idle level and the upper square level
     trigger_pre_percent=25,  # CHANGED: keep 10% pre-trigger so the turn-on edge is inside the window

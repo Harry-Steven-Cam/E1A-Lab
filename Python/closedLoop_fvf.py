@@ -43,7 +43,7 @@ picoscope.scope_prepare(
     b_name="COMP",
     c_name="Trig",
     d_name="PC",
-    trigger_channel="D",
+    trigger_channel="B",
     trigger_direction="f",
     trigger_level=2.5,
     trigger_pre_percent=0,

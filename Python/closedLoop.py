@@ -13,27 +13,29 @@ winsound.Beep(1500, 1000)
 t.sleep(0.01)
 winsound.Beep(1500, 1250)
 
-R1 = '100K'#str(input('R1 (k): ')+'K')
-R2 = '100K'#str(input('R2 (k): ')+'K')
-C = '100pF'#str(input('C: '))
+R1 = "100K"  # str(input('R1 (k): ')+'K')
+R2 = "100K"  # str(input('R2 (k): ')+'K')
+C = "1000pF"  # str(input('C: '))
 
-def data_save(name, x, xname, y, yname):
+
+def data_save(name, x, xname, y, yname, z, zname, t, tname, k, kname):
     file_path = f"./data/{name}.csv"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([xname, yname])
-        writer.writerows(zip(x, y))
+        writer.writerow([xname, yname, zname, tname, kname])
+        writer.writerows(zip(x, y, z, t, k))
 
     print(f"Data saved to: {os.path.abspath(file_path)}")
 
 
 picoscope.picoscope_open()
-time =0.005
+time = 0.005
 samplerate = 1e8
 picoscope.scope_prepare(
     capture_time=time,  # Traces will be captured over this time period (in seconds).
-    samples=time*samplerate,  # Number of samples to capture over the capture_time period.
+    samples=time
+    * samplerate,  # Number of samples to capture over the capture_time period.
     a_range=10,  # Voltage range for channel A (in volts).
     a_probe="x1",  # Probe attenuation for channel A (x1 is the default).
     b_range=10,
@@ -43,7 +45,7 @@ picoscope.scope_prepare(
     b_name="COMP",
     c_name="Trig",
     d_name="PC",
-    trigger_channel="A",
+    trigger_channel="B",
     trigger_direction="f",
     trigger_level=2.5,
     trigger_pre_percent=0,
@@ -59,23 +61,57 @@ def set_awg(freq):
         peak_to_peak=1,
         offset=-1,
     )
-    #print("awg set")
+    # print("awg set")
 
-def save_scope(voltage,time,volts):
-    plt.plot(time, volts)
-    plt.xlabel("time (s)")
-    plt.ylabel("Voltage (V)")
+def plot(x,y,name,xname,yname,save):
+    plot_styles = {"marker": "x", "linestyle": "none"}
+    plt.plot(x, y,**plot_styles)
+    plt.xlabel(xname)
+    plt.ylabel(yname)
     plt.grid(True)
     os.makedirs("./images", exist_ok=True)
-    plt.savefig(f"./images/{voltage}.png")
+    if save == True:
+        plt.plot()
+    plt.savefig(f"./images/{name}.png")
     plt.clf()
 
-def freqFinder(voltage,time):
+
+def phaseFinder(awg_out, vco_out, time, freq):
+    def rising_edges(signal):
+        threshold = (np.max(signal) + np.min(signal)) / 2
+        edges = np.where((signal[:-1] < threshold) & (signal[1:] >= threshold))[0]
+
+        # Interpolate the threshold crossing time
+        t_edges = time[edges] + (
+            (threshold - signal[edges]) / (signal[edges + 1] - signal[edges])
+        ) * (time[edges + 1] - time[edges])
+
+        return t_edges
+
+    awg_edges = rising_edges(awg_out)
+    vco_edges = rising_edges(vco_out)
+
+    if len(awg_edges) == 0 or len(vco_edges) == 0:
+        return np.nan
+
+    # Time difference between the first rising edges
+    delay_total = 0
+    for i in range(min(len(vco_edges), len(awg_edges))):
+        delay_total += vco_edges[i] - awg_edges[i]
+    delay = delay_total / len(awg_edges)
+
+    # Convert delay to phase and wrap into [-180, 180) degrees
+    phase = delay * freq
+
+    return phase
+
+
+def freqFinder(voltage, time):
     threshold = (np.max(voltage) + np.min(voltage)) / 2
-    peaktopeak = (np.max(voltage) - np.min(voltage))
+    peaktopeak = np.max(voltage) - np.min(voltage)
     edges = np.where((voltage[:-1] < threshold) & (voltage[1:] >= threshold))[0]
 
-    if len(edges) >= 2:# and peaktopeak>.8:
+    if len(edges) >= 2:  # and peaktopeak>.8:
         edge_times = time[edges]
         periods = np.diff(edge_times)
         # Ignore invalid periods
@@ -85,21 +121,23 @@ def freqFinder(voltage,time):
             freq = 1.0 / period
         else:
             freq = 0
-            #print("Invalid periods")
+            # print("Invalid periods")
     else:
         freq = 0
-        #print("Not enough rising edges detected")
-    return freq/1000
+        # print("Not enough rising edges detected")
+    return freq / 1000
 
-#picoscope.scope_monitor()
+
+# picoscope.scope_monitor()
 print("running")
 
 steps = 100
-top_limit=152_000
-bottom_limit=145_000
+top_limit = 100_000
+bottom_limit = 0  # 10_000
 frequencies = np.linspace(bottom_limit, top_limit, steps)
-awg_freq=[]
-vco_freq=[]
+awg_freq = []
+vco_freq = []
+phase_diff = []
 
 for freq in frequencies:
     set_awg(freq)
@@ -107,32 +145,46 @@ for freq in frequencies:
     time = np.asarray(time)
     awg_out = np.asarray(volts[0])
     vco_out = np.asarray(volts[1])
-    print(f'{np.round(((freq-bottom_limit)/(top_limit-bottom_limit))*100,0)}% complete')
+    print(f"{np.round(((freq-bottom_limit)/(top_limit-bottom_limit))*100,0)}% complete")
 
-    #awg_freq.append(freqFinder(awg_out,time))
-    awg_freq.append(freq/1000)
-    vco_freq.append(freqFinder(vco_out,time))
+    # awg_freq.append(freqFinder(awg_out,time))
+    awg_freq.append(freq / 1000)
+    vco_freq.append(freqFinder(vco_out, time))
+    phase_diff.append(phaseFinder(awg_out, vco_out, time, freq))
 
 
-ratio=[awg_freq[i]/vco_freq[i] for i in range(len(awg_freq))]
+ratio = [awg_freq[i] / vco_freq[i] for i in range(len(awg_freq))]
 
-#print("Final frequencies:", frequency)
+# print("Final frequencies:", frequency)
 winsound.Beep(2500, 500)
-#t.sleep(0.001)
+# t.sleep(0.001)
 winsound.Beep(2500, 500)
 
-plot_styles = {'marker':'x','linestyle':'none'}
+def namer(data_type):
+    name = f"Closed_loop_PC1_{data_type}_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)"
 
-plt.plot(awg_freq, ratio,**plot_styles)
-plt.ylabel("awg_freq/vco_freq)")
-plt.xlabel("awg_freq (KHz)")
-#plt.xlim(left=0)
-#plt.ylim(bottom=0)
-plt.grid(True)
-os.makedirs("./images", exist_ok=True)
-plt.savefig(f"./images/Closed_loop_PC1_locking_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz).png")
-plt.show()
-data_save(f"Closed_loop_PC1_locking_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)", awg_freq, "awg_freq", vco_freq, "vco_freq")
+plot(awg_freq,phase_diff,namer('phase_diff'),'awg_freq','phase_diff',False)
+plot(awg_freq,ratio,namer('ratio'),'awg_freq','ratio',False)
+plot(awg_freq,vco_freq,namer('fvf'),'awg_freq','vco_freq',False)
+
+R3=15_000
+C2=0.1e-6
+
+wc = round(1/(np.pi*2*R3*C2),-3)
+
+data_save(
+    namer(f'all_data_wc={wc}'),
+    time,
+    "time",
+    awg_freq,
+    "awg_freq",
+    vco_freq,
+    "vco_freq",
+    ratio,
+    "ratio",
+    phase_diff,
+    "phase_diff",
+)
 
 
 picoscope.picoscope_close()

@@ -15,15 +15,15 @@ winsound.Beep(1500, 1250)
 
 R1 = '100K'#str(input('R1 (k): ')+'K')
 R2 = '100K'#str(input('R2 (k): ')+'K')
-C = '1000pF'#str(input('C: '))
+C = '100pF'#str(input('C: '))
 
-def data_save(name, x, xname, y, yname,z,zname,t,tname):
+def data_save(name, x, xname, y, yname):
     file_path = f"./data/{name}.csv"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([xname, yname,zname,tname])
-        writer.writerows(zip(x, y,z,t))
+        writer.writerow([xname, yname])
+        writer.writerows(zip(x, y))
 
     print(f"Data saved to: {os.path.abspath(file_path)}")
 
@@ -43,7 +43,7 @@ picoscope.scope_prepare(
     b_name="COMP",
     c_name="Trig",
     d_name="PC",
-    trigger_channel="A",
+    trigger_channel="B",
     trigger_direction="f",
     trigger_level=2.5,
     trigger_pre_percent=0,
@@ -70,39 +70,6 @@ def save_scope(voltage,time,volts):
     plt.savefig(f"./images/{voltage}.png")
     plt.clf()
 
-def phaseFinder(awg_out, vco_out, time, freq):
-    def rising_edges(signal):
-        threshold = (np.max(signal) + np.min(signal)) / 2
-        edges = np.where(
-            (signal[:-1] < threshold) &
-            (signal[1:] >= threshold)
-        )[0]
-
-        # Interpolate the threshold crossing time
-        t_edges = time[edges] + (
-            (threshold - signal[edges]) /
-            (signal[edges + 1] - signal[edges])
-        ) * (time[edges + 1] - time[edges])
-
-        return t_edges
-
-    awg_edges = rising_edges(awg_out)
-    vco_edges = rising_edges(vco_out)
-
-    if len(awg_edges) == 0 or len(vco_edges) == 0:
-        return np.nan
-
-    # Time difference between the first rising edges
-    delay_total=0
-    for i in range(min(len(vco_edges),len(awg_edges))):
-        delay_total+=(vco_edges[i] - awg_edges[i])
-    delay = delay_total/len(awg_edges)
-
-    # Convert delay to phase and wrap into [-180, 180) degrees
-    phase = (delay * freq)
-
-    return phase
-
 def freqFinder(voltage,time):
     threshold = (np.max(voltage) + np.min(voltage)) / 2
     peaktopeak = (np.max(voltage) - np.min(voltage))
@@ -128,12 +95,11 @@ def freqFinder(voltage,time):
 print("running")
 
 steps = 100
-top_limit=100_000
-bottom_limit=0#10_000
+top_limit=152_000
+bottom_limit=145_000
 frequencies = np.linspace(bottom_limit, top_limit, steps)
 awg_freq=[]
 vco_freq=[]
-phase_diff=[]
 
 for freq in frequencies:
     set_awg(freq)
@@ -146,7 +112,6 @@ for freq in frequencies:
     #awg_freq.append(freqFinder(awg_out,time))
     awg_freq.append(freq/1000)
     vco_freq.append(freqFinder(vco_out,time))
-    phase_diff.append(phaseFinder(awg_out, vco_out, time, freq))
 
 
 ratio=[awg_freq[i]/vco_freq[i] for i in range(len(awg_freq))]
@@ -158,16 +123,16 @@ winsound.Beep(2500, 500)
 
 plot_styles = {'marker':'x','linestyle':'none'}
 
-plt.plot(awg_freq, phase_diff,**plot_styles)
-plt.ylabel("phase (0 to 1)")
+plt.plot(awg_freq, ratio,**plot_styles)
+plt.ylabel("awg_freq/vco_freq)")
 plt.xlabel("awg_freq (KHz)")
 #plt.xlim(left=0)
 #plt.ylim(bottom=0)
 plt.grid(True)
 os.makedirs("./images", exist_ok=True)
-plt.savefig(f"./images/Closed_loop_PC1_phase_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz).png")
+plt.savefig(f"./images/Closed_loop_PC1_locking_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz).png")
 plt.show()
-data_save(f"Closed_loop_PC1_phase_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)", awg_freq, "awg_freq", vco_freq, "vco_freq",ratio,'ratio',phase_diff,'phase_diff')
+data_save(f"Closed_loop_PC1_locking_R1={R1}_R2={R2}_C={C}_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)", awg_freq, "awg_freq", vco_freq, "vco_freq")
 
 
 picoscope.picoscope_close()
