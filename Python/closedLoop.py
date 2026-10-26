@@ -13,7 +13,7 @@ C = "1000pF"  # str(input('C: '))
 
 
 def data_save(name, data, data_name):
-    file_path = f"./data/{name}.csv"
+    file_path = f"./data/6.6/PC1/RCvary/{name}.csv"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -27,7 +27,7 @@ picoscope.picoscope_open()
 
 picoscope.scope_prepare(
     capture_time=0.05,  # Traces will be captured over this time period (in seconds).
-    samples=500_000,  # Number of samples to capture over the capture_time period.
+    samples=50_000,  # Number of samples to capture over the capture_time period.
     a_range=10,  # Voltage range for channel A (in volts).
     a_probe="x1",  # Probe attenuation for channel A (x1 is the default).
     b_range=10,
@@ -64,7 +64,7 @@ def plot(x, y, name, xname, yname, save, show=True):
     plt.grid(True)
     os.makedirs("./images", exist_ok=True)
     if save == True:
-        plt.savefig(f"./images/{name}.png")
+        plt.savefig(f"./images/6.6/PC1/RCvary/{name}.png")
     if show == True:
         plt.show()
     plt.clf()
@@ -85,7 +85,7 @@ def plot_all(x, ys, names, xname, ynames, saves):
             fig_tmp = ax.get_figure()
             # Save the individual plot if requested
 
-    plt.savefig(f"./images/{name}.png")
+    plt.savefig(f"./images/6.6/PC1/RCvary/{name}.png")
     plt.tight_layout()
     plt.show()
     plt.close()
@@ -180,9 +180,9 @@ for freq in frequencies:
 
 ratio = [awg_freq[i] / vco_freq[i] for i in range(len(awg_freq))]
 
-PC = 2
+PC = 1
 R3 = 15_000
-C2 = 0.01e-6
+C2 = 100e-12
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
 
 
