@@ -33,7 +33,7 @@ def data_save(name, x, xname, y, yname, z, zname):
 picoscope.picoscope_open()
 
 picoscope.scope_prepare(
-    capture_time=0.0005,  # Traces will be captured over this time period (in seconds).
+    capture_time=0.5,  # Traces will be captured over this time period (in seconds).
     samples=5_000,  # Number of samples to capture over the capture_time period.
     a_range=10,  # Voltage range for channel A (in volts).
     a_probe="x1",  # Probe attenuation for channel A (x1 is the default).
@@ -44,12 +44,12 @@ picoscope.scope_prepare(
     b_name="COMP",
     c_name="Trig",
     d_name="PC",
-    trigger_channel="B",  # CHANGED: trigger on the AWG signal itself so the window starts at turn-on
-    trigger_direction="r",  # CHANGED: rising edge (idle -1 V -> upper square level -0.5 V)
-    trigger_level=-0.75,  # CHANGED: midway between the idle level and the upper square level
-    trigger_pre_percent=25,  # CHANGED: keep 10% pre-trigger so the turn-on edge is inside the window
+    trigger_channel="C",
+    trigger_direction="r",
+    trigger_level=2, 
+    trigger_pre_percent=25,
     verbose=False,
-    trigger_timeout=1000,
+    trigger_timeout=0,
 )
 
 
@@ -64,12 +64,9 @@ def set_awg(freq):
     #print("awg set")
 
 def awg_idle():
-    #turns off the awg (CHANGE OFFSET???????)
     picoscope.awg(
-        waveform="square",
-        frequency=1000,
-        peak_to_peak=0,
-        offset=-1,
+        waveform="dc",
+        offset=0,
     )
 
 
@@ -111,14 +108,15 @@ def freqFinder(voltage,time):
 #picoscope.scope_monitor()
 print("running")
 
-freq = 17_000 
+freq = 18_000 
 
 awg_idle()
-t.sleep(0.1)
+t.sleep(0.5)
+print('setting freq')
 set_awg(freq)
 time, volts = picoscope.scope_capture()
 time = np.asarray(time)
-awg_out = np.asarray(volts[0])
+awg_out = np.asarray(volts[2])
 pll_out = np.asarray(volts[3]) #pll output
 
 awg_idle()

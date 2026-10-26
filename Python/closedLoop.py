@@ -12,13 +12,13 @@ R2 = "100K"  # str(input('R2 (k): ')+'K')
 C = "1000pF"  # str(input('C: '))
 
 
-def data_save(name, x, xname, y, yname, z, zname, t, tname, k, kname):
+def data_save(name, data, data_name):
     file_path = f"./data/{name}.csv"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([xname, yname, zname, tname, kname])
-        writer.writerows(zip(x, y, z, t, k))
+        writer.writerow(data_name)
+        writer.writerows(zip(data))
 
     print(f"Data saved to: {os.path.abspath(file_path)}")
 
@@ -68,6 +68,29 @@ def plot(x, y, name, xname, yname, save, show=True):
     if show == True:
         plt.show()
     plt.clf()
+
+def plot_all(x, ys, names, xname, ynames, saves):
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    axes = axes.flatten()
+
+    os.makedirs("./images", exist_ok=True)
+
+    for ax, y, name, yname, save in zip(axes, ys, names, ynames, saves):
+        ax.plot(x, y, marker="x", linestyle="none")
+        ax.set_xlabel(xname)
+        ax.set_ylabel(yname)
+        ax.grid(True)
+
+        if save:
+            fig_tmp = ax.get_figure()
+            # Save the individual plot if requested
+
+    plt.savefig(f"./images/{name}.png")
+    plt.tight_layout()
+    plt.show()
+    plt.close()
+
+
 
 
 def phaseFinder(awg_out, vco_out, time, freq):
@@ -138,6 +161,7 @@ frequencies = np.linspace(bottom_limit, top_limit, steps)
 awg_freq = []
 vco_freq = []
 phase_diff = []
+vco_in_val = []
 
 for freq in frequencies:
     set_awg(freq)
@@ -145,44 +169,49 @@ for freq in frequencies:
     time = np.asarray(time)
     awg_out = np.asarray(volts[0])
     vco_out = np.asarray(volts[1])
+    vco_in = np.asarray(volts[3])
     print(f"{np.round(((freq-bottom_limit)/(top_limit-bottom_limit))*100,0)}% complete")
 
-    # awg_freq.append(freqFinder(awg_out,time))
     awg_freq.append(freq / 1000)
     vco_freq.append(freqFinder(vco_out, time))
     phase_diff.append(phaseFinder(awg_out, vco_out, time, freq))
+    vco_in_val.append(np.mean(vco_in))
 
 
 ratio = [awg_freq[i] / vco_freq[i] for i in range(len(awg_freq))]
 
-PC = 1
+PC = 2
 R3 = 15_000
-C2 = 0.1e-6
+C2 = 0.01e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
 
 
 def namer(data_type):
     return f"Closed_loop_PC{PC}_{data_type}_R1={R1}_R2={R2}_C={C}_R3={R3/1000}K_C2={C2*1e9}nF_fc={fc}Hz_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)"
 
-plot(awg_freq, phase_diff, namer("phase_diff"), "awg_freq", "phase_diff", True)
-plot(awg_freq, ratio, namer("ratio"), "awg_freq", "ratio", True)
-plot(awg_freq, vco_freq, namer("fvf"), "awg_freq", "vco_freq", True)
+
+
+plot_all(
+    awg_freq,
+    [phase_diff, ratio, vco_freq, vco_in_val],
+    [
+        namer("phase_diff"),
+        namer("ratio"),
+        namer("fvf"),
+        namer("vco_in"),
+    ],
+    "awg_freq",
+    ["phase_diff", "ratio", "vco_freq", "vco_in_val"],
+    [True, True, True, True],
+)
 
 
 save_data = True
 if save_data:
     data_save(
         namer(f"all_data"),
-        time,
-        "time",
-        awg_freq,
-        "awg_freq",
-        vco_freq,
-        "vco_freq",
-        ratio,
-        "ratio",
-        phase_diff,
-        "phase_diff",
+        [time, awg_freq, vco_freq, ratio, phase_diff,vco_in_val],
+        ["time", "awg_freq", "vco_freq", "ratio", "phase_diff","vco_in_val"],
     )
 
 
