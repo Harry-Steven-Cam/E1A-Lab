@@ -1,0 +1,16 @@
+Phase-Locked loops (PLL) - Dr Andy Irvine
+
+RDC, Room E1.004 (4 spaces)
+
+Operation and optimisation of phase-locked loops is investigated, for frequency locking and for recovery of signals buried in noise, and elements of programming-based computer control and data acquisition are introduced.
+
+The experiment is based around the 4046 CMOS integrated circuit; this is designed for phase-locked loop applications and can be operated in two different modes, depending on the type of (integral) phase comparator which is used. The object of the experiment is to investigate the behaviour of the device in a variety of different applications, using each of the available comparators.
+
+The project involves constructing automated control and measurement systems using Python. Control signals are applied using an Arduino microcontroller (or otherwise)and experimental parameters are measured using a four-channel PicoScope. Investigators will:
+
+    Develop a strategy for programmatically controlling the measurement and taking data.
+    Characterise the properties of the two comparator circuits and of the on-board oscillator using an Arduino as a phase-shifting pulse generator and voltage source.
+    Measure the stability and locking/capture ranges of the closed-loop system, using the appropriate degree of automation.
+    Optionally, assemble and investigate the behaviour of the phase-locked loop in some typical applications – as a frequency multiplier, a demodulator of frequency-modulated signals as a clock regenerator for an irregular train of pulses.
+
+An ability to assemble working circuits and a basic understanding of electronics are helpful assets when doing the experiment, though circuits will not be complicated. Very basic coding experience will help, but this is not a programming project and will be perfectly accessible to non-experts wishing to learn computer-controlled data acquisition.
