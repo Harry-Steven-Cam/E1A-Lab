@@ -11,8 +11,10 @@ R1 = '100K' #str(input('R1 (k): ')+'K')
 R2 = '100K' #str(input('R2 (k): ')+'K')
 C = '100nF' #str(input('C: '))
 
+PC=1
+
 def data_save(name, x, xname, y, yname,z,zname):
-    file_path = f"./data/{name}.csv"
+    file_path = f"./data/6.6/PC{PC}/capacitor_current/{name}.csv"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -59,8 +61,8 @@ def save_scope(voltage,time,volts):
     plt.xlabel("time (s)")
     plt.ylabel("Voltage (V)")
     plt.grid(True)
-    os.makedirs("./images", exist_ok=True)
-    plt.savefig(f"./images/{voltage}.png")
+    os.makedirs(f"./data/6.6/PC{PC}/capacitor_current", exist_ok=True)
+    plt.savefig(f"./images/6.6/PC{PC}/capacitor_current/{voltage}.png")
     plt.clf()
 
 #picoscope.scope_monitor()
@@ -91,10 +93,10 @@ plt.xlim(left=0)
 #plt.ylim(bottom=0)
 plt.legend(['dV','pin7','pin6','Vco'])
 plt.grid(True)
-os.makedirs("./images", exist_ok=True)
-plt.savefig(f"./images/Capacitor_current_R1={R1}_R2={R2}_C={C}.png")
+os.makedirs("./data/6.6/PC{PC}/capacitor_current", exist_ok=True)
+plt.savefig(f"./data/6.6/PC{PC}/capacitor_current/Capacitor_current_R1={R1}_R2={R2}_C={C}.png")
 plt.show()
-data_save(f"Capacitor_current_R1={R1}_R2={R2}_C={C}", time, "time", dV, "dV data",vco_out,"vco_out")
+data_save(f"Capacitor_current_PC{PC}_R1={R1}_R2={R2}_C={C}", time, "time", dV, "dV data",vco_out,"vco_out")
 
 
 picoscope.picoscope_close()

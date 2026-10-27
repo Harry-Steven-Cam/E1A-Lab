@@ -13,7 +13,7 @@ C = '100pF'#str(input('C: '))
 
 R3='15K'#RC filter
 C2='100nF'#RC filter
-PC=1
+PC=2
 R3_ = 15e3
 C2_ = 100e-9
 fc=1/(np.pi*2*R3_*C2_)
@@ -22,6 +22,7 @@ fc=1/(np.pi*2*R3_*C2_)
 def data_save(name, x, xname, y, yname, z, zname):
     # Writes two columns (x, y) with a header row to ./data/<name>.csv
     file_path = f"./data/7/PC{PC}/{name}.csv"
+    os.makedirs(f"./data/7/PC{PC}", exist_ok=True)
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -34,8 +35,8 @@ def data_save(name, x, xname, y, yname, z, zname):
 picoscope.picoscope_open()
 
 picoscope.scope_prepare(
-    capture_time=0.5,  # Traces will be captured over this time period (in seconds).
-    samples=50_000,  # Number of samples to capture over the capture_time period.
+    capture_time=0.1,  # Traces will be captured over this time period (in seconds).
+    samples=5_000,  # Number of samples to capture over the capture_time period.
     a_range=10,  # Voltage range for channel A (in volts).
     a_probe="x1",  # Probe attenuation for channel A (x1 is the default).
     b_range=10,
@@ -48,27 +49,10 @@ picoscope.scope_prepare(
     trigger_channel="C",
     trigger_direction="r",
     trigger_level=2, 
-    trigger_pre_percent=25,
+    trigger_pre_percent=10,
     verbose=False,
     trigger_timeout=0,
 )
-
-
-def set_awg(freq):
-    # Turns the AWG on as a 1 Vpp square wave at freq (Hz), offset -1 V
-    picoscope.awg(
-        waveform="square",
-        frequency=freq,
-        peak_to_peak=1,
-        offset=-1,
-    )
-    #print("awg set")
-
-def awg_idle():
-    picoscope.awg(
-        waveform="dc",
-        offset=0,
-    )
 
 
 def plot(x, y, name, xname, yname, save=False, show=True,label=None):
@@ -78,7 +62,7 @@ def plot(x, y, name, xname, yname, save=False, show=True,label=None):
     plt.ylabel(yname)
     plt.legend()
     plt.grid(True)
-    os.makedirs("./images", exist_ok=True)
+    os.makedirs(f"./images/7/PC{PC}", exist_ok=True)
     if save == True:
         plt.savefig(f"./images/7/PC{PC}/{name}.csv")
     if show == True:
@@ -111,16 +95,16 @@ print("running")
 
 freq = 18_000 
 
-awg_idle()
+
 t.sleep(0.5)
-print('setting freq')
-set_awg(freq)
+print('turn on the signal')
+
 time, volts = picoscope.scope_capture()
 time = np.asarray(time)
 awg_out = np.asarray(volts[2])
 pll_out = np.asarray(volts[3]) #pll output
 
-awg_idle()
+
 
 
 
@@ -128,7 +112,7 @@ name = f"Turn_on_PC{PC}_R1={R1}_R2={R2}_C={C}_f{freq/1000}(kHz)_R3={R3}_C2={C2}_
 plot(time,awg_out,name,'time','voltage',label='awg_out',show=False)  # voltage vs time for A and B
 plot(time,pll_out,name,'time','voltage',label='pll_out',show=False)  # voltage vs time for A and B
 plt.show()
-#data_save(name+"_A", time, "time", awg_out, "A_SIG_IN", pll_out, "B_COMP")
+data_save(name, time, "time", awg_out, "awg_out", pll_out, "pll_out")
 
 
 picoscope.picoscope_close()
