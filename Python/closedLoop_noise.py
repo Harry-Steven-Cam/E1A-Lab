@@ -14,7 +14,7 @@ PC = 1
 R3 = 15_000
 C2 = 0.01e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
-noise=500
+noise=0
 
 steps = 200
 top_limit = 120_000
