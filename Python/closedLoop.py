@@ -12,12 +12,14 @@ C = "1000pF"  # str(input('C: '))
 
 PC = 2
 R3 = 15_000
-C2 = 0.01e-6
+C2 = 1e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
-noise=100
+
+save_data = False
+
 
 def data_save(name, data, data_name):
-    file_path = f"./data/6.6/PC{PC}/Noise/{name}.csv"
+    file_path = f"./data/6.6/PC{PC}/RCvary/{name}.csv"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -54,8 +56,8 @@ def set_awg(freq):
     picoscope.awg(
         waveform="square",
         frequency=freq,
-        peak_to_peak=1,
-        offset=-1,
+        peak_to_peak=0.6,
+        offset=-0.6,
     )
     # print("awg set")
 
@@ -68,7 +70,7 @@ def plot(x, y, name, xname, yname, save, show=True):
     plt.grid(True)
     os.makedirs("./images", exist_ok=True)
     if save == True:
-        plt.savefig(f"./images/6.6/PC{PC}/Noise/{name}.png")
+        plt.savefig(f"./images/6.6/PC{PC}/RCvary/{name}.png")
     if show == True:
         plt.show()
     plt.clf()
@@ -88,8 +90,8 @@ def plot_all(x, ys, names, xname, ynames, saves):
         if save:
             fig_tmp = ax.get_figure()
             # Save the individual plot if requested
-
-    plt.savefig(f"./images/6.6/PC{PC}/Noise/{name}.png")
+    if save_data == True:
+        plt.savefig(f"./images/6.6/PC{PC}/RCvary/{namer(f"all_data")}.png")
     plt.tight_layout()
     plt.show()
     plt.close()
@@ -187,7 +189,7 @@ ratio = [awg_freq[i] / vco_freq[i] for i in range(len(awg_freq))]
 
 
 def namer(data_type):
-    return f"Closed_loop_noise={noise}mV_PC{PC}_{data_type}_R1={R1}_R2={R2}_C={C}_R3={R3/1000}K_C2={C2*1e9}nF_fc={fc}Hz_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)"
+    return f"Closed_loop_PC{PC}_{data_type}_R1={R1}_R2={R2}_C={C}_R3={R3/1000}K_C2={C2*1e9}nF_fc={fc}Hz_f{bottom_limit/1000}(kHz) to {top_limit/1000}(kHz)"
 
 
 
@@ -206,7 +208,7 @@ plot_all(
 )
 
 
-save_data = True
+
 if save_data:
     data_save(
         namer(f"all_data"),

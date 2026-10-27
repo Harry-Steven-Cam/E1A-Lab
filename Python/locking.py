@@ -10,14 +10,15 @@ import time as t
 R1 = '100K'#str(input('R1 (k): ')+'K')
 R2 = '100K'#str(input('R2 (k): ')+'K')
 C = '100pF'#str(input('C: '))
+freq = 18_000 
+capture_time=0.0005
+PC=1
+R3 = 15e2
+C2 = 100e-12
+fc=f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
+name = f"Turn_on_PC{PC}_capturetime={capture_time}s_R1={R1}_R2={R2}_C={C}_f{freq/1000}(kHz)_R3={R3/1000}K_C2={C2*1e9}nF_fc={fc}(Hz)"
 
-R3='15K'#RC filter
-C2='100nF'#RC filter
-PC=2
-R3_ = 15e3
-C2_ = 100e-9
-fc=1/(np.pi*2*R3_*C2_)
-
+save_data=True
 
 def data_save(name, x, xname, y, yname, z, zname):
     # Writes two columns (x, y) with a header row to ./data/<name>.csv
@@ -35,13 +36,14 @@ def data_save(name, x, xname, y, yname, z, zname):
 picoscope.picoscope_open()
 
 picoscope.scope_prepare(
-    capture_time=0.1,  # Traces will be captured over this time period (in seconds).
-    samples=5_000,  # Number of samples to capture over the capture_time period.
+    capture_time=capture_time,  # Traces will be captured over this time period (in seconds).
+    samples=200_000,  # Number of samples to capture over the capture_time period.
     a_range=10,  # Voltage range for channel A (in volts).
     a_probe="x1",  # Probe attenuation for channel A (x1 is the default).
     b_range=10,
     c_range=10,
-    d_range=10,
+    d_probe="x10",
+    d_range=5,
     a_name="SIG_IN",  # Useful channel names for exported data and/or plot legend.
     b_name="COMP",
     c_name="Trig",
@@ -64,7 +66,7 @@ def plot(x, y, name, xname, yname, save=False, show=True,label=None):
     plt.grid(True)
     os.makedirs(f"./images/7/PC{PC}", exist_ok=True)
     if save == True:
-        plt.savefig(f"./images/7/PC{PC}/{name}.csv")
+        plt.savefig(f"./images/7/PC{PC}/{name}.png")
     if show == True:
         plt.show()
 
@@ -93,7 +95,6 @@ def freqFinder(voltage,time):
 #picoscope.scope_monitor()
 print("running")
 
-freq = 18_000 
 
 
 t.sleep(0.5)
@@ -108,11 +109,12 @@ pll_out = np.asarray(volts[3]) #pll output
 
 
 
-name = f"Turn_on_PC{PC}_R1={R1}_R2={R2}_C={C}_f{freq/1000}(kHz)_R3={R3}_C2={C2}_fc={fc}(Hz)"
 plot(time,awg_out,name,'time','voltage',label='awg_out',show=False)  # voltage vs time for A and B
 plot(time,pll_out,name,'time','voltage',label='pll_out',show=False)  # voltage vs time for A and B
+if save_data:
+    plt.savefig(f"./images/7/PC{PC}/{name}.png")
+    data_save(name, time, "time", awg_out, "awg_out", pll_out, "pll_out")
 plt.show()
-data_save(name, time, "time", awg_out, "awg_out", pll_out, "pll_out")
 
 
 picoscope.picoscope_close()
