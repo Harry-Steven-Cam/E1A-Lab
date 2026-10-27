@@ -9,12 +9,12 @@ import time as t
 R1 = "100K"  # str(input('R1 (k): ')+'K')
 R2 = "100K"  # str(input('R2 (k): ')+'K')
 C = "1000pF"  # str(input('C: '))
-
+#700-1400
 PC = 2
 R3 = 15_000
 C2 = 0.01e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
-noise=0
+noise=100
 
 steps = 200
 top_limit = 30_000
@@ -215,6 +215,58 @@ if save_data:
         ["time", "awg_freq", "vco_freq", "ratio", "phase_diff","vco_in_val"],
     )
 
+#######################################
+print('second running')
+
+steps = 200
+top_limit = 60_000
+bottom_limit = 0
+
+frequencies = np.linspace(bottom_limit, top_limit, steps)
+awg_freq = []
+vco_freq = []
+phase_diff = []
+vco_in_val = []
+
+for freq in frequencies:
+    set_awg(freq)
+    time, volts = picoscope.scope_capture()
+    time = np.asarray(time)
+    awg_out = -np.asarray(volts[0])
+    vco_out = np.asarray(volts[1])
+    vco_in = np.asarray(volts[3])
+    print(f"{np.round(((freq-bottom_limit)/(top_limit-bottom_limit))*100,0)}% complete")
+
+    awg_freq.append(freq / 1000)
+    vco_freq.append(freqFinder(vco_out, time))
+    phase_diff.append(phaseFinder(awg_out, vco_out, time, freq))
+    vco_in_val.append(np.mean(vco_in))
+
+
+ratio = [awg_freq[i] / vco_freq[i] for i in range(len(awg_freq))]
+
+plot_all(
+    awg_freq,
+    [phase_diff, ratio, vco_freq, vco_in_val],
+    [
+        namer("phase_diff"),
+        namer("ratio"),
+        namer("fvf"),
+        namer("vco_in"),
+    ],
+    "awg_freq",
+    ["phase_diff", "ratio", "vco_freq", "vco_in_val"],
+    [True, True, True, True],
+)
+
+
+save_data = True
+if save_data:
+    data_save(
+        namer(f"all_data"),
+        [time, awg_freq, vco_freq, ratio, phase_diff,vco_in_val],
+        ["time", "awg_freq", "vco_freq", "ratio", "phase_diff","vco_in_val"],
+    )
 
 picoscope.picoscope_close()
 print(R1)
