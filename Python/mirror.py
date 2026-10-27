@@ -9,7 +9,9 @@ import time as t
 
 R1 = '100K' #str(input('R1 (k): ')+'K')
 R2 = '100K' #str(input('R2 (k): ')+'K')
-C = '100nF' #str(input('C: '))
+C = '1000pF' #str(input('C: '))
+
+save_data=True
 
 PC=1
 
@@ -25,21 +27,21 @@ def data_save(name, x, xname, y, yname,z,zname):
 
 
 picoscope.picoscope_open()
-time =0.02
-samplerate = 1e7
+time =0.0001
 picoscope.scope_prepare(
     capture_time=time,  # Traces will be captured over this time period (in seconds).
-    samples=time*samplerate,  # Number of samples to capture over the capture_time period.
+    samples=50_000,  # Number of samples to capture over the capture_time period.
     a_range=10,  # Voltage range for channel A (in volts).
     a_probe="x1",  # Probe attenuation for channel A (x1 is the default).
     b_range=10,
     c_range=10,
     d_range=10,
+    d_probe="x10",
     a_name="SIG_IN",  # Useful channel names for exported data and/or plot legend.
     b_name="COMP",
     c_name="Trig",
     d_name="PC",
-    trigger_channel="A",
+    trigger_channel="C",
     trigger_direction="f",
     trigger_level=2.5,
     trigger_pre_percent=0,
@@ -48,11 +50,12 @@ picoscope.scope_prepare(
 )
 
 
-def set_awg(voltage: float):
+def set_awg(freq: float):
     picoscope.awg(
-        waveform="dc",
-        peak_to_peak=0,
-        offset=-voltage,
+        waveform="square",
+        frequency=freq,
+        peak_to_peak=0.6,
+        offset=-0.6,
     )
     #print("awg set")
 
@@ -68,11 +71,10 @@ def save_scope(voltage,time,volts):
 #picoscope.scope_monitor()
 print("running")
 
-frequency = []
 
-voltage = (1.88/5)*3 #should be around 18kHz
+freq=18_000
 
-set_awg(voltage)
+set_awg(freq)
 time, volts = picoscope.scope_capture()
 voltage_data_pin_7=volts[0]
 voltage_data_pin_6 =volts[1]
@@ -93,10 +95,11 @@ plt.xlim(left=0)
 #plt.ylim(bottom=0)
 plt.legend(['dV','pin7','pin6','Vco'])
 plt.grid(True)
-os.makedirs("./data/6.6/PC{PC}/capacitor_current", exist_ok=True)
-plt.savefig(f"./data/6.6/PC{PC}/capacitor_current/Capacitor_current_R1={R1}_R2={R2}_C={C}.png")
+os.makedirs(f"./data/6.6/PC{PC}/capacitor_current", exist_ok=True)
+if save_data:
+    plt.savefig(f"./images/6.6/PC{PC}/capacitor_current/Capacitor_current_R1={R1}_R2={R2}_C={C}.png")
+    data_save(f"Capacitor_current_PC{PC}_R1={R1}_R2={R2}_C={C}", time, "time", dV, "dV data",vco_out,"vco_out")
 plt.show()
-data_save(f"Capacitor_current_PC{PC}_R1={R1}_R2={R2}_C={C}", time, "time", dV, "dV data",vco_out,"vco_out")
 
 
 picoscope.picoscope_close()
