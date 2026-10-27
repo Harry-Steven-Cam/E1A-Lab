@@ -12,11 +12,13 @@ R2 = '100K' #str(input('R2 (k): ')+'K')
 C = '1000pF' #str(input('C: '))
 
 save_data=True
-
+freq=18_000
 PC=1
 
+name=f"Capacitor_current_PC{PC}_f={freq/1000}kHz_R1={R1}_R2={R2}_C={C}"
+
 def data_save(name, x, xname, y, yname,z,zname):
-    file_path = f"./data/6.6/PC{PC}/capacitor_current/{name}.csv"
+    file_path = f"./data/6.6/PC{PC}/capacitor_current/name.csv"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -36,7 +38,6 @@ picoscope.scope_prepare(
     b_range=10,
     c_range=10,
     d_range=10,
-    d_probe="x10",
     a_name="SIG_IN",  # Useful channel names for exported data and/or plot legend.
     b_name="COMP",
     c_name="Trig",
@@ -63,7 +64,7 @@ def set_awg(freq: float):
 print("running")
 
 
-freq=18_000
+
 
 set_awg(freq)
 time, volts = picoscope.scope_capture()
@@ -88,8 +89,8 @@ plt.legend(['dV','pin7','pin6','Vco'])
 plt.grid(True)
 os.makedirs(f"./data/6.6/PC{PC}/capacitor_current", exist_ok=True)
 if save_data:
-    plt.savefig(f"./images/6.6/PC{PC}/capacitor_current/Capacitor_current_R1={R1}_R2={R2}_C={C}.png")
-    data_save(f"Capacitor_current_PC{PC}_R1={R1}_R2={R2}_C={C}", time, "time", dV, "dV data",vco_out,"vco_out")
+    plt.savefig(f"./images/6.6/PC{PC}/capacitor_current/{name}.png")
+    data_save(name, time, "time", dV, "dV data",vco_out,"vco_out")
 plt.show()
 
 
