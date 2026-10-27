@@ -14,8 +14,11 @@ PC = 1
 R3 = 15_000
 C2 = 0.01e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
-noise=2000
+noise=1900
 
+steps = 200
+top_limit = 120_000
+bottom_limit = 0  # 10_000
 
 def data_save(name, data, data_name):
     file_path = f"./data/6.6/PC{PC}/Noise/{name}.csv"
@@ -159,9 +162,6 @@ def freqFinder(voltage, time):
 # picoscope.scope_monitor()
 print("running")
 
-steps = 200
-top_limit = 60_000
-bottom_limit = 0  # 10_000
 frequencies = np.linspace(bottom_limit, top_limit, steps)
 awg_freq = []
 vco_freq = []
