@@ -9,13 +9,16 @@ import time as t
 R1 = "100K"  # str(input('R1 (k): ')+'K')
 R2 = "100K"  # str(input('R2 (k): ')+'K')
 C = "1000pF"  # str(input('C: '))
+steps = 200
+top_limit = 30_000
+bottom_limit = 10_000
 
 PC = 2
 R3 = 15_000
-C2 = 1e-6
+C2 = 100e-12
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
 
-save_data = False
+save_data = True
 
 
 def data_save(name, data, data_name):
@@ -160,9 +163,6 @@ def freqFinder(voltage, time):
 # picoscope.scope_monitor()
 print("running")
 
-steps = 200
-top_limit = 60_000
-bottom_limit = 0  # 10_000
 frequencies = np.linspace(bottom_limit, top_limit, steps)
 awg_freq = []
 vco_freq = []

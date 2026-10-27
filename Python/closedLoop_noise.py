@@ -10,15 +10,15 @@ R1 = "100K"  # str(input('R1 (k): ')+'K')
 R2 = "100K"  # str(input('R2 (k): ')+'K')
 C = "1000pF"  # str(input('C: '))
 
-PC = 1
+PC = 2
 R3 = 15_000
 C2 = 0.01e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
-noise=1900
+noise=0
 
 steps = 200
-top_limit = 120_000
-bottom_limit = 0  # 10_000
+top_limit = 30_000
+bottom_limit = 10_000
 
 def data_save(name, data, data_name):
     file_path = f"./data/6.6/PC{PC}/Noise/{name}.csv"

@@ -59,15 +59,6 @@ def set_awg(freq: float):
     )
     #print("awg set")
 
-def save_scope(voltage,time,volts):
-    plt.plot(time, volts)
-    plt.xlabel("time (s)")
-    plt.ylabel("Voltage (V)")
-    plt.grid(True)
-    os.makedirs(f"./data/6.6/PC{PC}/capacitor_current", exist_ok=True)
-    plt.savefig(f"./images/6.6/PC{PC}/capacitor_current/{voltage}.png")
-    plt.clf()
-
 #picoscope.scope_monitor()
 print("running")
 
