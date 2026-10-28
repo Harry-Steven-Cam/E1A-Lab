@@ -27,7 +27,7 @@ def data_save(name, data, data_name):
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(data_name)
-        writer.writerows(zip(data))
+        writer.writerows(zip(*data))
 
     print(f"Data saved to: {os.path.abspath(file_path)}")
 
