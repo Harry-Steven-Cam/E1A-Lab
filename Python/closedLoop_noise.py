@@ -14,7 +14,9 @@ PC = 1
 R3 = 15_000
 C2 = 0.01e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
-noise=0
+noise=1900
+save_data = True
+
 
 steps = 200
 top_limit = 120_000
@@ -71,9 +73,9 @@ def plot(x, y, name, xname, yname, save, show=True):
     plt.ylabel(yname)
     plt.grid(True)
     os.makedirs("./images", exist_ok=True)
-    if save == True:
+    if save:
         plt.savefig(f"./images/6.6/PC{PC}/Noise/{name}.png")
-    if show == True:
+    if show:
         plt.show()
     plt.clf()
 
@@ -93,7 +95,8 @@ def plot_all(x, ys, names, xname, ynames, saves):
             fig_tmp = ax.get_figure()
             # Save the individual plot if requested
 
-    plt.savefig(f"./images/6.6/PC{PC}/Noise/{name}.png")
+    if save_data:
+        plt.savefig(f"./images/6.6/PC{PC}/Noise/{name}.png")
     plt.tight_layout()
     plt.show()
     plt.close()
@@ -206,8 +209,6 @@ plot_all(
     [True, True, True, True],
 )
 
-
-save_data = True
 if save_data:
     data_save(
         namer(f"all_data"),
@@ -260,7 +261,6 @@ plot_all(
 )
 
 
-save_data = True
 if save_data:
     data_save(
         namer(f"all_data"),
@@ -312,7 +312,6 @@ plot_all(
 )
 
 
-save_data = True
 if save_data:
     data_save(
         namer(f"all_data"),

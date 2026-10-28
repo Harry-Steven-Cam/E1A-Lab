@@ -13,12 +13,12 @@ C = '100pF'#str(input('C: '))
 freq = 18_000 
 capture_time=0.0005
 PC=1
-R3 = 15e2
-C2 = 100e-12
+R3 = 15e3
+C2 = 0.01e-6
 fc=f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
 name = f"Turn_on_PC{PC}_capturetime={capture_time}s_R1={R1}_R2={R2}_C={C}_f{freq/1000}(kHz)_R3={R3/1000}K_C2={C2*1e9}nF_fc={fc}(Hz)"
 
-save_data=True
+save_data=False
 
 def data_save(name, x, xname, y, yname, z, zname):
     # Writes two columns (x, y) with a header row to ./data/<name>.csv
