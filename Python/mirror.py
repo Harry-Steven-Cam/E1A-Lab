@@ -12,13 +12,13 @@ R2 = '100K' #str(input('R2 (k): ')+'K')
 C = '1000pF' #str(input('C: '))
 
 save_data=True
-freq=18_000
+#freq=20_000
+frequencies=np.arange(0,100_000,10_000)
 PC=1
 
-name=f"Capacitor_current_PC{PC}_f={freq/1000}kHz_R1={R1}_R2={R2}_C={C}"
 
 def data_save(name, x, xname, y, yname,z,zname):
-    file_path = f"./data/6.6/PC{PC}/capacitor_current/name.csv"
+    file_path = f"./data/6.6/PC{PC}/capacitor_current/{name}.csv"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -32,7 +32,7 @@ picoscope.picoscope_open()
 time =0.0001
 picoscope.scope_prepare(
     capture_time=time,  # Traces will be captured over this time period (in seconds).
-    samples=50_000,  # Number of samples to capture over the capture_time period.
+    samples=10_000,  # Number of samples to capture over the capture_time period.
     a_range=10,  # Voltage range for channel A (in volts).
     a_probe="x1",  # Probe attenuation for channel A (x1 is the default).
     b_range=10,
@@ -65,33 +65,36 @@ print("running")
 
 
 
+for freq in frequencies:
+    t.sleep(1)
+    name=f"Capacitor_current_PC{PC}_f={freq/1000}kHz_R1={R1}_R2={R2}_C={C}"
+    set_awg(freq)
+    time, volts = picoscope.scope_capture()
+    voltage_data_pin_7=volts[0]
+    voltage_data_pin_6 =volts[1]
+    vco_out = volts[3]
+    #print(voltage_data_pin_7[0])
+    dV = [voltage_data_pin_7[x]-voltage_data_pin_6[x] for x in range(len(voltage_data_pin_7))]
+    time = np.asarray(time)
 
-set_awg(freq)
-time, volts = picoscope.scope_capture()
-voltage_data_pin_7=volts[0]
-voltage_data_pin_6 =volts[1]
-vco_out = volts[3]
-#print(voltage_data_pin_7[0])
-dV = [voltage_data_pin_7[x]-voltage_data_pin_6[x] for x in range(len(voltage_data_pin_7))]
-time = np.asarray(time)
+    plot_styles = {'marker':'x','linestyle':'none'}
 
-plot_styles = {'marker':'x','linestyle':'none'}
-
-plt.plot(time, dV,color='purple')
-plt.plot(time, voltage_data_pin_7,color='blue')
-plt.plot(time, voltage_data_pin_6,color='red')
-plt.plot(time, vco_out,color='black')
-plt.ylabel("dV (V) over C")
-plt.xlabel("time")
-plt.xlim(left=0)
-#plt.ylim(bottom=0)
-plt.legend(['dV','pin7','pin6','Vco'])
-plt.grid(True)
-os.makedirs(f"./data/6.6/PC{PC}/capacitor_current", exist_ok=True)
-if save_data:
-    plt.savefig(f"./images/6.6/PC{PC}/capacitor_current/{name}.png")
-    data_save(name, time, "time", dV, "dV data",vco_out,"vco_out")
-plt.show()
+    plt.plot(time, dV,color='purple',**plot_styles)
+    plt.plot(time, voltage_data_pin_7,color='blue',**plot_styles)
+    plt.plot(time, voltage_data_pin_6,color='red',**plot_styles)
+    plt.plot(time, vco_out,color='black',**plot_styles)
+    plt.ylabel("dV (V) over C")
+    plt.xlabel("time")
+    plt.xlim(left=0)
+    #plt.ylim(bottom=0)
+    plt.legend(['dV','pin7','pin6','Vco'])
+    plt.grid(True)
+    os.makedirs(f"./data/6.6/PC{PC}/capacitor_current", exist_ok=True)
+    if save_data:
+        plt.savefig(f"./images/6.6/PC{PC}/capacitor_current/{name}.png")
+        data_save(name, time.tolist(), "time", dV, "dV data",vco_out,"vco_out")
+    #plt.show()
+    plt.clf()
 
 
 picoscope.picoscope_close()

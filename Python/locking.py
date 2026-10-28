@@ -11,10 +11,10 @@ R1 = '100K'#str(input('R1 (k): ')+'K')
 R2 = '100K'#str(input('R2 (k): ')+'K')
 C = '100pF'#str(input('C: '))
 freq = 18_000 
-capture_time=0.0005
+capture_time=0.005
 PC=1
 R3 = 15e3
-C2 = 0.01e-6
+C2 = 0.0033e-6
 fc=f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
 name = f"Turn_on_PC{PC}_capturetime={capture_time}s_R1={R1}_R2={R2}_C={C}_f{freq/1000}(kHz)_R3={R3/1000}K_C2={C2*1e9}nF_fc={fc}(Hz)"
 
@@ -42,7 +42,7 @@ picoscope.scope_prepare(
     a_probe="x1",  # Probe attenuation for channel A (x1 is the default).
     b_range=10,
     c_range=10,
-    d_probe="x10",
+    d_probe="x1",
     d_range=5,
     a_name="SIG_IN",  # Useful channel names for exported data and/or plot legend.
     b_name="COMP",
@@ -51,7 +51,7 @@ picoscope.scope_prepare(
     trigger_channel="C",
     trigger_direction="r",
     trigger_level=2, 
-    trigger_pre_percent=10,
+    trigger_pre_percent=20,
     verbose=False,
     trigger_timeout=0,
 )
@@ -121,3 +121,4 @@ picoscope.picoscope_close()
 print(R1)
 print(R2)
 print(C)
+print(fc)
