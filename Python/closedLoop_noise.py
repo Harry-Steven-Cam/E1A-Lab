@@ -315,7 +315,7 @@ plot_all(
 if save_data:
     data_save(
         namer(f"all_data"),
-        [time, awg_freq, vco_freq, ratio, phase_diff,vco_in_val],
+        [time.tolist(), awg_freq.tolist(), vco_freq.tolist(), ratio.tolist(), phase_diff.tolist(),vco_in_val.tolist()],
         ["time", "awg_freq", "vco_freq", "ratio", "phase_diff","vco_in_val"],
     )
 
