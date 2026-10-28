@@ -10,15 +10,15 @@ import time as t
 R1 = '100K'#str(input('R1 (k): ')+'K')
 R2 = '100K'#str(input('R2 (k): ')+'K')
 C = '100pF'#str(input('C: '))
-freq = 18_000 
-capture_time=0.005
+freq = 10_000 
+capture_time=0.01
 PC=1
-R3 = 15e3
-C2 = 0.0033e-6
+R3 = 1500
+C2 = 0.1e-6
 fc=f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
 name = f"Turn_on_PC{PC}_capturetime={capture_time}s_R1={R1}_R2={R2}_C={C}_f{freq/1000}(kHz)_R3={R3/1000}K_C2={C2*1e9}nF_fc={fc}(Hz)"
 
-save_data=False
+save_data=True
 
 def data_save(name, x, xname, y, yname, z, zname):
     # Writes two columns (x, y) with a header row to ./data/<name>.csv
