@@ -10,11 +10,11 @@ R1 = "100K"  # str(input('R1 (k): ')+'K')
 R2 = "100K"  # str(input('R2 (k): ')+'K')
 C = "1000pF"  # str(input('C: '))
 steps = 200
-top_limit = 30_000
-bottom_limit = 10_000
+top_limit = 100_000
+bottom_limit = 0
 
 PC = 2
-R3 = 150_0000
+R3 = 15_000
 C2 = 1e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
 
@@ -22,7 +22,7 @@ save_data = True
 
 
 def data_save(name, data, data_name):
-    file_path = f"./data/6.6/PC{PC}/RCvary/{name}.csv"
+    file_path = f"./data/7/PC{PC}/multiplier2/{name}.csv"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -73,7 +73,7 @@ def plot(x, y, name, xname, yname, save, show=True):
     plt.grid(True)
     os.makedirs("./images", exist_ok=True)
     if save == True:
-        plt.savefig(f"./images/6.6/PC{PC}/RCvary/{name}.png")
+        plt.savefig(f"./images/7/PC{PC}/multiplier2/{name}.png")
     if show == True:
         plt.show()
     plt.clf()
@@ -94,7 +94,7 @@ def plot_all(x, ys, names, xname, ynames, saves):
             fig_tmp = ax.get_figure()
             # Save the individual plot if requested
     if save_data == True:
-        plt.savefig(f"./images/6.6/PC{PC}/RCvary/{namer(f"all_data")}.png")
+        plt.savefig(f"./images/7/PC{PC}/multiplier2/{namer(f"all_data")}.png")
     plt.tight_layout()
     plt.show()
     plt.close()
