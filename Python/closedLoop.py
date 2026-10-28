@@ -13,8 +13,8 @@ steps = 200
 top_limit = 30_000
 bottom_limit = 10_000
 
-PC = 2
-R3 = 150_000
+PC = 1
+R3 = 15
 C2 = 0.01e-6
 fc = f"{(1 / (np.pi * 2 * R3 * C2)):.3g}"
 
