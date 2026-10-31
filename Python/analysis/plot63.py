@@ -12,7 +12,7 @@ save_location = (
     r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.3"
 )
 file_name = "phase_V_avg_63"
-save_fig = True
+save_fig = False
 
 files = os.listdir(folder)
 
@@ -61,8 +61,8 @@ for csv in files:
             ecolor="black",
             capsize=3, 
         )
-        plt.plot(x_fit, y_fit, color=colours[3], alpha=0.6)
-        plt.plot(x_fit2, y_fit2, color=colours[3], alpha=0.6)
+        plt.plot(x_fit, y_fit, color=colours[1], alpha=0.6)
+        plt.plot(x_fit2, y_fit2, color=colours[1], alpha=0.6)
         # ---------------------- text results -----------------------------
         plt.text(
             5,

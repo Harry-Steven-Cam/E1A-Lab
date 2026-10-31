@@ -3,10 +3,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-folder = r"C:/Users/harry/Desktop/university work/year 3/E1a/data/6.5"
+from plot_style import *
+from line_finder import *
+
+folder = r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/data/6.5"
+save_location = r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.5/RCRcombos"
+
+file_name = "phase_V_avg_64"
+
+unit_start = 0
+unit_end = 361
+unit_jump = 60
 
 file_names = os.listdir(folder)
-
 capacitance = file_names
 
 voltage_data = []
@@ -24,15 +33,6 @@ for c in capacitance:
             voltage_data.append(df["Voltage data"].values)
             info_data.append(csv[0:-4])
 
-colours = [
-    "#1f77b4",
-    "#ff7f0e",
-    "#2ca02c",
-    "#d62728",
-    "#42938C",
-    "#000000",
-    "#d019c4",
-]
 """
 for x in range(7):
     for i in range(4):  # range(len(voltage_data)):
@@ -100,6 +100,10 @@ else:
     print("Invalid choice.")
 
 if plot_indices:
+    matplot_styles()
+    ax = plt.gca()
+    ax.set_xticks(np.arange(0, 5, 1))
+    ax.set_yticks(np.arange(0, 100, 20))
     plt.figure()
     for count, idx in enumerate(plot_indices):
         plt.plot(
@@ -112,6 +116,7 @@ if plot_indices:
     plt.ylabel("Frequency (kHz)")
     plt.xlabel("Voltage (V)")
     plt.xlim(left=0)
+    plt.ylim(bottom=0)
     plt.legend()
     plt.show()
 else:

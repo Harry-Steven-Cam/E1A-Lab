@@ -5,7 +5,15 @@ import os
 import matplotlib as mpl
 
 plot_styles = {"marker": "x", "linestyle": "none"}
-colours = ["#EE7733", "#0077BB", "#33BBEE", "#EE3377", "#CC3311", "#009988", "#BBBBBB"]
+colours = [
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#42938C",
+    "#000000",
+    "#d019c4",
+]
 
 
 def matplot_styles(
@@ -60,15 +68,17 @@ def matplot_styles(
         }
     )
     ax = plt.gca()
-    if unit_start!=unit_end: ax.set_xticks(np.arange(unit_start, unit_end, unit_jump))
+    if unit_start != unit_end:
+        ax.set_xticks(np.arange(unit_start, unit_end, unit_jump))
     ax.set_box_aspect(9 / 16)
 
+
 def format_sci(value, decimals=2):
-    #Format the number to standard Python scientific notation (e.g., '1.23e+04')
+    # Format the number to standard Python scientific notation (e.g., '1.23e+04')
     sci_str = f"{value:.{decimals}e}"
-    #Split the string into the mantissa and the exponent
-    mantissa, exponent = sci_str.split('e')
-    #Convert exponent to integer to strip the '+' and leading zeros (e.g., '+04' -> 4)
+    # Split the string into the mantissa and the exponent
+    mantissa, exponent = sci_str.split("e")
+    # Convert exponent to integer to strip the '+' and leading zeros (e.g., '+04' -> 4)
     exp_int = int(exponent)
     return rf"{mantissa} $\times$ $10^{{{exp_int}}}$"
 
@@ -83,17 +93,21 @@ def plot_data(
     save=False,
     show_plot=True,
     alpha=1,
-    linestyle='none',
-    marker = 'x',
+    linestyle="none",
+    marker="x",
 ):
     plt.title(title)
     if np.ndim(x[0]) > 0:
         for i, (x_data, y_data) in enumerate(zip(x, y)):
             c = colours[i % len(colours)]
-            plt.plot(x_data, y_data, color=c,alpha=alpha,linestyle=linestyle,marker=marker)
+            plt.plot(
+                x_data, y_data, color=c, alpha=alpha, linestyle=linestyle, marker=marker
+            )
     else:
         # Dimension is 0 (it's a scalar number)
-        plt.plot(x, y, color=colours[1],alpha=alpha,linestyle=linestyle,marker=marker)
+        plt.plot(
+            x, y, color=colours[0], alpha=alpha, linestyle=linestyle, marker=marker
+        )
 
     if names:
         plt.xlabel(names[0])
