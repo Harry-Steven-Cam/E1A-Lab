@@ -64,16 +64,12 @@ def matplot_styles(
     ax.set_box_aspect(9 / 16)
 
 def format_sci(value, decimals=2):
-    # 1. Format the number to standard Python scientific notation (e.g., '1.23e+04')
+    #Format the number to standard Python scientific notation (e.g., '1.23e+04')
     sci_str = f"{value:.{decimals}e}"
-    
-    # 2. Split the string into the mantissa and the exponent
+    #Split the string into the mantissa and the exponent
     mantissa, exponent = sci_str.split('e')
-    
-    # 3. Convert exponent to integer to strip the '+' and leading zeros (e.g., '+04' -> 4)
+    #Convert exponent to integer to strip the '+' and leading zeros (e.g., '+04' -> 4)
     exp_int = int(exponent)
-    
-    # 4. Return the formatted LaTeX string with double curly braces for the exponent
     return rf"{mantissa} $\times$ $10^{{{exp_int}}}$"
 
 
@@ -86,15 +82,18 @@ def plot_data(
     file_name=None,
     save=False,
     show_plot=True,
+    alpha=1,
+    linestyle='none',
+    marker = 'x',
 ):
     plt.title(title)
     if np.ndim(x[0]) > 0:
         for i, (x_data, y_data) in enumerate(zip(x, y)):
             c = colours[i % len(colours)]
-            plt.plot(x_data, y_data, color=c, **plot_styles)
+            plt.plot(x_data, y_data, color=c,alpha=alpha,linestyle=linestyle,marker=marker)
     else:
         # Dimension is 0 (it's a scalar number)
-        plt.plot(x, y, color=colours[1], **plot_styles)
+        plt.plot(x, y, color=colours[1],alpha=alpha,linestyle=linestyle,marker=marker)
 
     if names:
         plt.xlabel(names[0])
@@ -102,7 +101,7 @@ def plot_data(
 
     if save:
         os.makedirs(save_location, exist_ok=True)
-        plt.savefig(f"{save_location}/{file_name}.png")
+        plt.savefig(f"{save_location}/{file_name}.svg")
     if show_plot:
         plt.show()
 
@@ -159,6 +158,6 @@ def plot_2x2(
 
     if save:
         os.makedirs(save_location, exist_ok=True)
-        plt.savefig(f"{save_location}/{file_name}.png")
+        plt.savefig(f"{save_location}/{file_name}.svg")
     if show_plot:
         plt.show()

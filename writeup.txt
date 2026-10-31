@@ -1,0 +1,39 @@
+
+
+
+all circuit diagrams
+
+talk about code and how it may have introduced errors and nyquist etc
+
+poor connections causing noise etc
+
+picoscope sample rate AND resolution -- maybe use for errors
+(8bit?)
+
+measured response thing at 5v all else at 10v
+
+
+compare and explain how PC1 and PC2 behave with phase and link to later on with harmonics
+and explain how they work
+
+explain the whole current switching in current mirroring, understanding the circuit
+
+plots for all sections
+63
+assume minimal x axis error
+
+64
+
+65
+
+66
+
+equations?
+
+link theory to results and any quirks
+
+errors:
+quantisation:
+delta V = Vrange/2^8bits, so max res is 1/2 deltaV
+    P(x)=1/dV or any point in the bin--> so variance = int +1/2dv to -1/2dV x^2p(x) dx etc 
+    to give sigma V below
