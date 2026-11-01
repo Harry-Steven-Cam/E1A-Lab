@@ -12,7 +12,7 @@ save_location = (
     r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.3"
 )
 file_name = "phase_V_avg_63"
-save_fig = False
+save_fig = True
 
 files = os.listdir(folder)
 
@@ -41,18 +41,22 @@ for csv in files:
         mean_voltage_data = df["Mean voltage data"].values
         # ---------------------- plotting errors and best fits -----------------------------
         mean_voltage_error = get_voltage_errors(mean_voltage_data, voltage_window=10)
-        x_fit, y_fit, m, c, error = get_poly_fit(
+        x_fit, y_fit, p, p_err = get_poly_fit(
             phase_data[0 : len(phase_data) // 2 + 1],
             mean_voltage_data[0 : len(mean_voltage_data) // 2 + 1],
             1,
             error_data=mean_voltage_error[0 : len(phase_data) // 2 + 1],
         )
-        x_fit2, y_fit2, m2, c2, error2 = get_poly_fit(
+        x_fit2, y_fit2, p2, p2_err = get_poly_fit(
             phase_data[len(phase_data) // 2 :],
             mean_voltage_data[len(mean_voltage_data) // 2 :],
             1,
             error_data=mean_voltage_error[len(phase_data) // 2 :],
         )
+        m=p[0]
+        m2=p2[0]
+        m_err=p_err[0]
+        m2_err=p2_err[0]
         plt.errorbar(
             phase_data,
             mean_voltage_data,
@@ -67,19 +71,21 @@ for csv in files:
         plt.text(
             5,
             -1.5,
-            rf"$m_{{up}}$ = ({m : .5g}±{format_sci(error[0],1)}) V/°",
+            rf"$m_{{up}}$ = {format_sci_err(m,m_err,decimals=3)} V/°",
             fontsize=8,
         )
         plt.text(
             5,
             -2,
-            rf"$m_{{down}}$ = ({m2 : .5g}±{format_sci(error2[0],1)}) V/° ",
+            rf"$m_{{down}}$ = {format_sci_err(m2,m2_err,decimals=3)} V/°",
             fontsize=8,
         )
+        Kd=(m-m2)*180/(2*np.pi)
+        Kd_err=m_err*180/((2*np.pi)*np.sqrt(2))
         plt.text(
             5,
             -2.5,
-            rf"$K_{{D_ PC1}}$=({(m-m2)*180/(2*np.pi) : .7g}±{format_sci(error[0]/np.sqrt(2),0)}) V/rad",
+            rf"$K_{{D_ PC1}}$={format_sci_err(Kd,Kd_err,decimals=3)} V/rad",
             fontsize=8,
         )
         # ---------------------- plotting data -----------------------------

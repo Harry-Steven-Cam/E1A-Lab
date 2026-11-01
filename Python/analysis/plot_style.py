@@ -80,7 +80,39 @@ def format_sci(value, decimals=2):
     mantissa, exponent = sci_str.split("e")
     # Convert exponent to integer to strip the '+' and leading zeros (e.g., '+04' -> 4)
     exp_int = int(exponent)
+    if value == 0:
+        return 0
     return rf"{mantissa} $\times$ $10^{{{exp_int}}}$"
+
+
+def format_sci_err(value, error, decimals=2):
+    # Handle the zero edge case
+    if value == 0 and error == 0:
+        return "0"
+    #Determine the shared exponent based on the primary value
+    # (If the value is exactly 0, base the order of magnitude on the error)
+    base_val = value if value != 0 else error
+
+    sci_str = f"{base_val:.{decimals}e}"
+    exponent = int(sci_str.split("e")[1])
+
+    # Scale both numbers by the shared exponent
+    val_scaled = value / (10**exponent)
+    err_scaled = error / (10**exponent)
+    # Drop the scientific multiplier entirely if the exponent is 0
+    if exponent == 0:
+        return rf"{val_scaled:.{decimals}f} $\pm$ {err_scaled:.{decimals}f}"
+
+    return rf"({val_scaled:.{decimals}f} $\pm$ {err_scaled:.{decimals}f}) $\times$ $10^{{{exponent}}}$"
+
+
+# Format string for nice legends (e.g. converting '100k' to '100 k$\Omega$') and infinity
+def format_val(val):
+    if not val:
+        return ""
+    if val in ["infinitek", "inf"]:
+        return r"${\infty}$ $\Omega$"
+    return val.replace("pf", " pF").replace("nf", " nF").replace("k", r" k$\Omega$")
 
 
 def plot_data(
