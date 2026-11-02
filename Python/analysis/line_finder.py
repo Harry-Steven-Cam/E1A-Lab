@@ -35,6 +35,7 @@ def get_poly_fit(x, y, order=1, error_data=None,error_x=None,error_y=None, steps
     else:
         err_data = error_data
         popt, pcov = curve_fit(linear_model, x, y, sigma=err_data, absolute_sigma=True)
+    
     if order == 1:
         m = popt[0]
         c = popt[1]
@@ -139,3 +140,25 @@ def get_odr_fit(x, y, x_err, y_err, steps=100):
     y_fit = odr_linear_model(p, x_fit)
 
     return x_fit, y_fit, p, p_err
+
+
+def freqFinder(voltage, time):
+    threshold = (np.max(voltage) + np.min(voltage)) / 2
+    peaktopeak = np.max(voltage) - np.min(voltage)
+    edges = np.where((voltage[:-1] < threshold) & (voltage[1:] >= threshold))[0]
+
+    if len(edges) >= 2:  # and peaktopeak>.8:
+        edge_times = time[edges]
+        periods = np.diff(edge_times)
+        # Ignore invalid periods
+        periods = periods[periods > 0]
+        if len(periods) > 0:
+            period = np.mean(periods)
+            freq = 1.0 / period
+        else:
+            freq = 0
+            # print("Invalid periods")
+    else:
+        freq = 0
+        # print("Not enough rising edges detected")
+    return freq

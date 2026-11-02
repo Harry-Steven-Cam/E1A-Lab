@@ -12,8 +12,8 @@ R2 = '100K' #str(input('R2 (k): ')+'K')
 C = '1000pF' #str(input('C: '))
 
 save_data=True
-#freq=20_000
-frequencies=np.arange(0,100_000,10_000)
+#freq= 18_000
+#frequencies=np.arange(0,100_000,10_000)
 PC=1
 
 
