@@ -18,6 +18,8 @@ capacitance = file_names
 time_data = []
 dv_data = []
 vco_out_data = []
+r1_voltage_data = []
+r2_voltage_data = []
 
 info_data = []
 
@@ -27,8 +29,10 @@ for csv in subfolders:
     tmp_path_2 = f"{folder}/current_mirror/{csv}"
     df = pd.read_csv(tmp_path_2)
     time_data.append(df["time"].values)
-    dv_data.append(df["dV data"].values)
+    dv_data.append(df["capacitor_voltage"].values)
     vco_out_data.append(df["vco_out"].values)
+    r1_voltage_data.append(df["r1_voltage"].values)
+    r2_voltage_data.append(df["r2_voltage"].values)
     info_data.append(csv[17:-4])
 
 
@@ -69,9 +73,6 @@ def calculate_filtered_gradient(time, dV, C, ax, window_sections=50):
 plot_styles = {"marker": "x", "linestyle": "none"}
 print("Plotting data...")
 
-plot_styles = {"marker": "x", "linestyle": "none"}
-print("Plotting data...")
-
 for i in range(len(info_data)):
 
     matplot_styles()
@@ -90,6 +91,8 @@ for i in range(len(info_data)):
     # LEFT: Voltage against time
     ax1.plot(time_data[i], dv_data[i], color="purple", label="Capacitor voltage")
     ax1.plot(time_data[i], vco_out_data[i], color="black", label="VCO output")
+    ax1.plot(time_data[i], r1_voltage_data[i], color="blue", label="R1 voltage")
+    ax1.plot(time_data[i], r2_voltage_data[i], color="red", label="R2 voltage")
 
     ax1.axhline(y=0, color="black", linewidth=1.5)
     ax1.set_ylabel("Voltage (V)")
@@ -107,7 +110,12 @@ for i in range(len(info_data)):
     freq = freqFinder(vco_out_data[i], time_data[i])
     dVpp = 3.7
     theory_current = 2 * C_val * dVpp * freq
+    I_in = np.mean(r1_voltage_data[i]) / data_to_val(R1) + np.mean(
+        r2_voltage_data[i]
+    ) / data_to_val(R2)
     ax2.axhline(y=0, color="black", linewidth=1.5)
+    ax2.axhline(y=I_in, color="blue", label=r"$I_{in}$", linestyle="--")
+    ax2.axhline(y=-I_in, color="blue", linestyle="--")
     ax2.axhline(
         y=theory_current, color="blue", label="Theoretical current", linestyle="--"
     )

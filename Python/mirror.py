@@ -13,7 +13,7 @@ C = '1000pF' #str(input('C: '))
 
 save_data=True
 #freq= 18_000
-#frequencies=np.arange(0,100_000,10_000)
+frequencies=np.arange(0,100_000,10_000)
 PC=1
 
 
