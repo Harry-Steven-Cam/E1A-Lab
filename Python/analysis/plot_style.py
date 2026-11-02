@@ -129,6 +129,8 @@ def data_to_val(val):
         return float(value[:-2]) * 1e-9
     elif value.endswith("pf"):
         return float(value[:-2]) * 1e-12
+    elif value.endswith("hz"):
+        return float(value[:-2])
     else:
         return float(value)
 
@@ -143,6 +145,8 @@ def parse_filename(filename):
             params["r1"] = p[3:]
         elif p.startswith("r2="):
             params["r2"] = p[3:]
+        elif p.startswith("fc="):
+            params["fc"] = p[3:]
     return params
 
 
@@ -193,9 +197,9 @@ def plot_2x2(
     save=False,
     show_plot=True,
 ):
+    matplot_styles()
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
     axes = axes.flatten()
-
     # If title is a single string, use it as the main figure title
     if isinstance(title, str):
         fig.suptitle(title)
@@ -206,15 +210,18 @@ def plot_2x2(
 
     for i in range(min(4, len(x))):
         ax = axes[i]
+        matplot_styles()
 
         # If the first element of subplot i has a dimension > 0, it contains nested arrays
         if np.ndim(x[i][0]) > 0:
             for j, (x_data, y_data) in enumerate(zip(x[i], y[i])):
                 c = colours[j % len(colours)]
+                matplot_styles()
                 ax.plot(x_data, y_data, color=c, **plot_styles)
         else:
             # Single dataset for subplot i
-            ax.plot(x[i], y[i], color=colours[1], **plot_styles)
+            matplot_styles()
+            ax.plot(x[i], y[i], color=colours[0], **plot_styles)
 
         if subplot_titles[i] is not None:
             ax.set_title(subplot_titles[i])
@@ -222,10 +229,12 @@ def plot_2x2(
         # Handle axis labels
         if names:
             if isinstance(names[0], str):
+                matplot_styles()
                 # Same labels applied to all 4 graphs
                 ax.set_xlabel(names[0])
                 ax.set_ylabel(names[1])
             else:
+                matplot_styles()
                 # Specific labels for each graph (list of 4 lists)
                 ax.set_xlabel(names[i][0])
                 ax.set_ylabel(names[i][1])
@@ -238,3 +247,5 @@ def plot_2x2(
         plt.savefig(f"{save_location}/{file_name}.svg")
     if show_plot:
         plt.show()
+    else:
+        plt.close()

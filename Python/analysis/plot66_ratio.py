@@ -3,6 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
+from plot_style import *
+from line_finder import *
+
 folder = r"C:/Users/harry/Desktop/university work/year 3/E1a/data/6.6"
 
 file_names = os.listdir(folder)
