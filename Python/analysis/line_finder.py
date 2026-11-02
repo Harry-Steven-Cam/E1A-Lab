@@ -1,4 +1,5 @@
 from scipy.optimize import curve_fit
+from scipy import odr
 import numpy as np
 import pandas as pd
 
@@ -6,7 +7,9 @@ import pandas as pd
 def linear_model(x, m, c):
     return m * x + c
 
-
+def odr_linear_model(B, x):
+    m, c = B
+    return m * x + c
 """    
 # p: array of coefficients
 # V: covariance matrix
@@ -19,20 +22,32 @@ errors = np.sqrt(np.diag(V)) #not great for data
     """
 
 
-def get_poly_fit(x, y, order=1, error_data=None, steps=100):
+def get_poly_fit(x, y, order=1, error_data=None,error_x=None,error_y=None, steps=100):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+
+    if error_x is not None and error_y is not None:
+        x_fit,y_fit,p,p_err = get_odr_fit(x, y, error_x, error_y, steps=steps) #xfit,yfit,m,m_err
+        return x_fit, y_fit, p, p_err
     if error_data is None:
-        err_data = np.full_like(x, 0)
-        popt, pcov = curve_fit(linear_model, x, y)
+        p0 = np.polyfit(x, y, 1)
+        popt, pcov = curve_fit(linear_model, x, y, p0=p0)
     else:
         err_data = error_data
         popt, pcov = curve_fit(linear_model, x, y, sigma=err_data, absolute_sigma=True)
-    x_fit = np.linspace(min(x), max(x), steps)
     if order == 1:
         m = popt[0]
         c = popt[1]
         m_err = np.sqrt(pcov[0, 0])
         c_err = np.sqrt(pcov[1, 1])
-        return x_fit, linear_model(x_fit, m, c), [m, c], [m_err, c_err]
+        x_fit = np.linspace(min(x), max(x), steps)
+
+        y_pred = linear_model(x, m, c)
+        ss_res = np.sum((y - y_pred) ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+
+        return x_fit, linear_model(x_fit, m, c), [m, c], [m_err, c_err, r_squared]
 
 
 def get_voltage_errors(voltage_data, voltage_window=10.0, resolution_bits=8):
@@ -49,7 +64,9 @@ def get_voltage_errors(voltage_data, voltage_window=10.0, resolution_bits=8):
     return voltage_errors
 
 
-def finding_slope(x, y, lower_percentile=0.1, upper_percentile=0.9, error_data=None):
+def finding_slope(
+    x, y, lower_percentile=0.1, upper_percentile=0.95, error_x=None, error_y=None
+):
     val_max = max(y)
     val_min = min(y)
     val_range = val_max - val_min
@@ -72,15 +89,53 @@ def finding_slope(x, y, lower_percentile=0.1, upper_percentile=0.9, error_data=N
     x_rising = x[lower_index:upper_index]
     y_rising = y[lower_index:upper_index]
     if y[upper_index] - y[lower_index] < 1e-8:  # flat line case
-        gradient = 0
-        error = [0, 0]
+        p = [0, 0]
+        p_err = [0, 0]
         x_fit = x
         y_fit = y
     elif x[upper_index] - x[lower_index] == 0:
         print("infinite gradient")
     else:
-        x_fit, y_fit, gradient, c, error = get_poly_fit(
-            x_rising, y_rising, error_data=error_data[lower_index:upper_index], order=1
+        x_fit, y_fit, p, p_err = get_poly_fit(
+            x_rising,
+            y_rising,
+            error_y=error_y[lower_index:upper_index],
+            error_x=error_x[lower_index:upper_index],
+            order=1,
         )
 
-    return gradient, error[0], x_fit, y_fit
+    return x_fit, y_fit, p[0], p_err[0]  # returns xfit,yfit,m,m_err
+
+
+def get_odr_fit(x, y, x_err, y_err, steps=100):
+    # Ensure inputs are numpy arrays
+    x, y = np.array(x), np.array(y)
+    x_err, y_err = np.array(x_err), np.array(y_err)
+
+    # Prevent absolute zero errors from causing division-by-zero crashes
+    x_err = np.where(x_err == 0, 1e-10, x_err)
+    y_err = np.where(y_err == 0, 1e-10, y_err)
+
+    # 2. Package the data with its dual errors
+    data = odr.RealData(x, y, sx=x_err, sy=y_err)
+
+    # 3. Instantiate the ODR model
+    model = odr.Model(odr_linear_model)
+
+    # 4. Provide a rough initial guess for the algorithm
+    guess_m = (y[-1] - y[0]) / (x[-1] - x[0]) if (x[-1] - x[0]) != 0 else 1.0
+    guess_c = y[0] - guess_m * x[0]
+
+    # 5. Set up and run the Orthogonal Distance Regression
+    odr_obj = odr.ODR(data, model, beta0=[guess_m, guess_c])
+    output = odr_obj.run()
+
+    # Extract optimized parameters and their standard errors
+    p = output.beta  # [m, c]
+    p_err = output.sd_beta  # [m_err, c_err]
+
+    # Generate the smooth line array for plotting
+    x_fit = np.linspace(min(x), max(x), steps)
+    y_fit = odr_linear_model(p, x_fit)
+
+    return x_fit, y_fit, p, p_err

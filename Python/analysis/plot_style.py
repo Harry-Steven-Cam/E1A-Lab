@@ -47,7 +47,7 @@ def matplot_styles(
             "axes.titlepad": 12,  # gap between title and plot (points)
             "axes.labelpad": 6,
             # figures
-            "figure.dpi": 150,  # on-screen resolution
+            "figure.dpi": 100,  # on-screen resolution
             "savefig.dpi": 150,  # saved-file resolution
             "savefig.bbox": "tight",  # trim whitespace on save
             "figure.constrained_layout.use": False,  # auto-avoid overlapping labels
@@ -89,7 +89,7 @@ def format_sci_err(value, error, decimals=2):
     # Handle the zero edge case
     if value == 0 and error == 0:
         return "0"
-    #Determine the shared exponent based on the primary value
+    # Determine the shared exponent based on the primary value
     # (If the value is exactly 0, base the order of magnitude on the error)
     base_val = value if value != 0 else error
 
@@ -108,11 +108,29 @@ def format_sci_err(value, error, decimals=2):
 
 # Format string for nice legends (e.g. converting '100k' to '100 k$\Omega$') and infinity
 def format_val(val):
+    value = val
     if not val:
         return ""
     if val in ["infinitek", "inf"]:
         return r"${\infty}$ $\Omega$"
-    return val.replace("pf", " pF").replace("nf", " nF").replace("k", r" k$\Omega$")
+    elif "pf" in val.lower():
+        value = f"{int(value.lower().replace("pf", ""))*1e-3}nF"
+    return value.replace("pf", " pF").replace("nf", " nF").replace("k", r" k$\Omega$")
+
+
+def data_to_val(val):
+    value = val.lower().strip()
+    if value in ("infinite", "inf", "infinity","infinitek"):
+        return np.inf
+
+    if value.endswith("k"):
+        return float(value[:-1]) * 1e3
+    elif value.endswith("nf"):
+        return float(value[:-2]) * 1e-9
+    elif value.endswith("pf"):
+        return float(value[:-2]) * 1e-12
+    else:
+        return float(value)
 
 
 def plot_data(

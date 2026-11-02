@@ -25,6 +25,9 @@ assume minimal x axis error
 64
 
 65
+plot gradient with R2?
+plot baseline with R1?
+plot gradient with C?
 
 66
 
@@ -35,5 +38,8 @@ link theory to results and any quirks
 errors:
 quantisation:
 delta V = Vrange/2^8bits, so max res is 1/2 deltaV
-    P(x)=1/dV or any point in the bin--> so variance = int +1/2dv to -1/2dV x^2p(x) dx etc 
-    to give sigma V below
+P(x)=1/dV or any point in the bin--> so variance = int +1/2dv to -1/2dV x^2p(x) dx etc 
+to give sigma V below
+
+references:
+https://www.ti.com/lit/an/scha002a/scha002a.pdf --formulae

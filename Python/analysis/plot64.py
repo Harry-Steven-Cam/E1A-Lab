@@ -13,7 +13,7 @@ save_location = (
 )
 file_name = "phase_V_avg_64"
 
-save_fig = True
+save_fig = False
 
 files = os.listdir(folder)
 info_data = ["Phase (°)", "Mean voltage (V)"]
@@ -63,7 +63,7 @@ for csv in files:
             yerr=mean_voltage_error,
             linestyle="none",
             ecolor="black",
-            capsize=3,
+            capsize=2,
         )
         plt.plot(x_fit, y_fit, color=colours[1], alpha=0.6)
         plt.plot(x_fit2, y_fit2, color=colours[1], alpha=0.6)
