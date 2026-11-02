@@ -132,6 +132,19 @@ def data_to_val(val):
     else:
         return float(value)
 
+# Helper function to extract C, R1, R2 from the filename
+def parse_filename(filename):
+    params = {"c": None, "r1": None, "r2": None}
+    parts = filename.lower().split("_")
+    for p in parts:
+        if p.startswith("c="):
+            params["c"] = p[2:]
+        elif p.startswith("r1="):
+            params["r1"] = p[3:]
+        elif p.startswith("r2="):
+            params["r2"] = p[3:]
+    return params
+
 
 def plot_data(
     x,

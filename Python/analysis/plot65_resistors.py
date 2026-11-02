@@ -21,21 +21,6 @@ frequency_data = []
 info_data = []
 parsed_info = []
 
-
-# Helper function to extract C, R1, R2 from the filename
-def parse_filename(filename):
-    params = {"c": None, "r1": None, "r2": None}
-    parts = filename.lower().split("_")
-    for p in parts:
-        if p.startswith("c="):
-            params["c"] = p[2:]
-        elif p.startswith("r1="):
-            params["r1"] = p[3:]
-        elif p.startswith("r2="):
-            params["r2"] = p[3:]
-    return params
-
-
 # Load all data
 for c in capacitance:
     if c != "current_mirror":
@@ -59,6 +44,8 @@ for c in capacitance:
             parsed_info.append(
                 parse_filename(filename_no_ext)
             )  # R12 C values for corresponding data
+
+combined_plot_data = {"r1": [], "r2": [], "c": []}
 
 
 # Main plotting function
@@ -92,12 +79,12 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
         # ---------------------- find slope :) (and fit over region)-----------------------------
         t_min = 10e-7
         error_freq = t_min * (frequency_data[idx]) ** 2  # err propagation formula :)
-        error_voltage = get_voltage_errors(voltage_data[idx])
-        x_fit, y_fit, gradient, m_err  = finding_slope(
+        error_voltage = get_voltage_errors(voltage_data[idx], resolution_bits=6)
+        x_fit, y_fit, gradient, m_err = finding_slope(
             voltage_data[idx],
             frequency_data[idx],
             error_x=error_voltage,
-            error_y=error_freq
+            error_y=error_freq,
         )
         k_o = np.absolute(2 * np.pi * gradient * 1e3)
         f_min = frequency_data[idx][0] * 1e3
@@ -126,7 +113,7 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
         # plt.text(0, -0.2 - 0.1 * count, text, fontsize=8, transform=ax.transAxes)
         # here for displaying all the interesting info
         # ---------------------- plot -----------------------------
-        label+= rf", $K_{{O}}$ = {k_o :.4f}±{m_err :.4f} Hz/V, "
+        label += rf", $K_{{O}}$ = {k_o :.4f}±{m_err :.4f} Hz/V"
 
         plt.plot(
             voltage_data[idx],
@@ -162,92 +149,98 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
     else:
         plt.clf()
         plt.close()
+    fixed_params = parsed_info[indices[0]]
     if varying_param == "r1":
-        plt.figure()
-        matplot_styles()
-        ax = plt.gca()
-        plt.plot(x_data_values, k_o_values, marker="x", linestyle="none", color="black")
-        x_fit, y_fit, p, p_err = get_poly_fit(x_data_values, k_o_values)
-        plt.text(
-            0.025,
-            0.9,
-            rf"$R^{{2}}$={p_err[2]:.4f}" + "\n" + f"m={format_sci_err(p[0], p_err[0])}",
-            fontsize=8,
-            transform=ax.transAxes,
+        combined_plot_data["r1"].append(
+            {
+                "x": np.asarray(x_data_values, dtype=float),
+                "y": np.asarray(k_o_values, dtype=float),
+                "label": (f"R2={format_val(fixed_params['r2'])}, " f"C={format_val(fixed_params['c'])}"),
+            }
         )
-        plt.plot(x_fit, y_fit, color=colours[0], linestyle="--")
-        plt.ylabel(rf"$K_{{O}}$ (Hz/V)")
-        plt.xlabel(rf"$1/R_{{1}}$ ($\Omega^{-1}$)")
-        plt.title(
-            rf"$K_{{O}}$ vs 1/$R_{{1}}$ ($C=1$ nF, $R_2=${format_val(params['r2'])})"
+    elif varying_param == "r2":
+        combined_plot_data["r2"].append(
+            {
+                "x": np.asarray(x_data_values, dtype=float),
+                "y": np.asarray(f_min_values, dtype=float),
+                "label": (f"R1={format_val(fixed_params['r1'])}, " f"C={format_val(fixed_params['c'])}"),
+            }
         )
-    if varying_param == "r2":
-        plt.figure()
-        matplot_styles()
-        ax = plt.gca()
-        plt.plot(
-            x_data_values, f_min_values, marker="x", linestyle="none", color="black"
+    elif varying_param == "c":
+        inverse_k_o_values = np.array([1 / k if k != 0 else np.inf for k in k_o_values])
+        combined_plot_data["c"].append(
+            {
+                "x": np.asarray(x_data_values, dtype=float),
+                "y": inverse_k_o_values,
+                "label": (
+                    f"R1={format_val(fixed_params['r1'])}, " f"R2={format_val(fixed_params['r2'])}"
+                ),
+            }
         )
-        x_fit, y_fit, p, p_err = get_poly_fit(x_data_values, f_min_values)
-        plt.text(
-            0.025,
-            0.9,
-            rf"$R^{{2}}$={p_err[2]:.4f} "
-            + "\n"
-            + f"m={format_sci_err(p[0], p_err[0])}",
-            fontsize=8,
-            transform=ax.transAxes,
+
+
+def create_combined_plot(param, ylabel, xlabel, title, filename):
+    datasets = combined_plot_data[param]
+    if not datasets:
+        return
+    plt.figure()
+    matplot_styles()
+    ax = plt.gca()
+    for i, data in enumerate(datasets):
+        x = data["x"]
+        y = data["y"]
+        # Remove invalid values
+        valid = np.isfinite(x) & np.isfinite(y)
+        x = x[valid]
+        y = y[valid]
+        if len(x) == 0:
+            continue
+        colour = colours[i % len(colours)]
+        # Plot experimental data
+        plt.plot(x, y, marker="x", linestyle="none", color=colour, alpha=0.8)
+        # Fit and calculate R squared
+        r_squared = np.nan
+        if len(x) >= 2 and len(np.unique(x)) >= 2:
+            try:
+                x_fit, y_fit, p, p_err = get_poly_fit(x, y)
+                gradient = p[0]
+                gradient_err = p_err[0]
+                intercept = p[1]
+                intercept_err = p_err[1]
+                r_squared = p_err[2]
+                plt.plot(x_fit, y_fit, linestyle="--", color=colour, alpha=0.8)
+            except (RuntimeError, ValueError) as e:
+                print(f"Fit failed for {data['label']}: {e}")
+        # Legend entry
+        m_unit = (
+            r"Hz/V$\Omega$"
+            if param == "r1"
+            else r"Hz/V$\Omega$" if param == "r2" else "HzF/V"
         )
-        plt.plot(x_fit, y_fit, color=colours[0], linestyle="--")
-        plt.ylabel(rf"$f_{{min}}$ (Hz)")
-        plt.xlabel(rf"$1/R_{{2}}$ ($\Omega^{-1}$)")
-        plt.title(
-            rf"$f_{{min}}$ vs 1/$R_{{2}}$ ($C=1$ nF, $R_1=${format_val(params['r1'])})"
+        legend_label = (
+            data["label"]
+            + f", m = {format_sci_err(gradient, gradient_err)} {m_unit}"
+            + f", R² = {r_squared:.4f}"
         )
-    elif varying_param == "c":  # and np.inf not in :
-        plt.figure()
-        matplot_styles()
-        ax = plt.gca()
-        inverse_k_o_values = [1 / k if k != 0 else np.inf for k in k_o_values]
-        plt.plot(
-            x_data_values,
-            inverse_k_o_values,
-            marker="x",
-            linestyle="none",
-            color="black",
-        )
-        x_fit, y_fit, p, p_err = get_poly_fit(x_data_values, inverse_k_o_values)
-        C_stray = p[1] / p[0]
-        C_stray_err = np.sqrt((p_err[1] / p[1]) ** 2 + (p_err[0] / p[0]) ** 2) * abs(
-            C_stray
-        )
-        plt.plot(x_fit, y_fit, color=colours[0], linestyle="--")
-        plt.text(
-            0.025,
-            0.85,
-            rf"$R^{{2}}$={p_err[2]:.4f} "
-            + "\n"
-            + f"m={format_sci_err(p[0], p_err[0])}"
-            + "\n"
-            + f"$C_{{stray}}$={C_stray*1e12:.0f} ± {C_stray_err*1e12:.0f}pF",
-            fontsize=8,
-            transform=ax.transAxes,
-        )
-        plt.ylabel(rf"$1/K_{{O}}$ (Hz/V)")
-        plt.xlabel(rf"$C$ (F)")
-        plt.title(
-            rf"$K_{{O}}$ vs 1/$C$ ($R_1=${format_val(params['r1'])}, $R_2=${format_val(params['r2'])})"
-        )
+        # Add a legend handle using the same colour
+        plt.plot([], [], color=colour, marker="x", linestyle="--", label=legend_label)
+
+    plt.ylabel(ylabel)
+    plt.xlabel(xlabel)
+    plt.title(title)
+
     plt.xlim(left=0)
     plt.ylim(bottom=0)
-    plt.tight_layout()
 
+    plt.legend(fontsize=7)
+    plt.tight_layout()
     if save_data:
-        plt.savefig(os.path.join(save_location, ("line_fits_" + filename_out)), dpi=150)
+        plt.savefig(os.path.join(save_location, filename), dpi=300)
+
     if show_plots:
         plt.show()
+        pass
     else:
-        plt.clf()
         plt.close()
 
 
@@ -309,5 +302,41 @@ for r1, r2 in r1_r2_pairs:
             fixed_param=[data_to_val(r1), data_to_val(r2)],
         )
 
+# ------------------------------------------------------------
+# 1. KO against 1/R1
+# ------------------------------------------------------------
 
+create_combined_plot(
+    param="r1",
+    ylabel=r"$K_O$ (Hz/V)",
+    xlabel=r"$1/R_1$ ($\Omega^{-1}$)",
+    title=r"$K_O$ vs $1/R_1$",
+    filename="Combined_KO_vs_invR1.svg",
+)
+
+
+# ------------------------------------------------------------
+# 2. Minimum frequency against 1/R2
+# ------------------------------------------------------------
+
+create_combined_plot(
+    param="r2",
+    ylabel=r"$f_{\min}$ (Hz)",
+    xlabel=r"$1/R_2$ ($\Omega^{-1}$)",
+    title=r"$f_{\min}$ vs $1/R_2$",
+    filename="Combined_fmin_vs_invR2.svg",
+)
+
+
+# ------------------------------------------------------------
+# 3. Inverse KO against capacitance
+# ------------------------------------------------------------
+
+create_combined_plot(
+    param="c",
+    ylabel=r"$1/K_O$ (V/Hz)",
+    xlabel=r"$C$ (F)",
+    title=r"$1/K_O$ vs $C$",
+    filename="Combined_invKO_vs_C.svg",
+)
 print(f"All plots completed and saved to {save_location}")
