@@ -7,17 +7,18 @@ from plot_style import *
 from line_finder import *
 
 folder = r"C:/Users/harry/Desktop/university work/year 3/E1A-lab/data/6.5"
-save_location = r"C:/Users/harry/Desktop/university work/year 3/E1A-lab/analysis_images/6.5/current_mirror"
+save_location = (
+    r"C:/Users/harry/Desktop/university work/year 3/E1A-lab/analysis_images/6.5/current_mirror"
+)
 
-save_data = True
-show_plot = False
+save_data = False
+show_plot = True
 
 file_names = os.listdir(folder)
 capacitance = file_names
 
 time_data = []
 dv_data = []
-vco_out_data = []
 r1_voltage_data = []
 r2_voltage_data = []
 
@@ -26,14 +27,15 @@ info_data = []
 tmp_path = f"{folder}/current_mirror"
 subfolders = os.listdir(tmp_path)
 for csv in subfolders:
-    tmp_path_2 = f"{folder}/current_mirror/{csv}"
-    df = pd.read_csv(tmp_path_2)
-    time_data.append(df["time"].values)
-    dv_data.append(df["capacitor_voltage"].values)
-    vco_out_data.append(df["vco_out"].values)
-    r1_voltage_data.append(df["r1_voltage"].values)
-    r2_voltage_data.append(df["r2_voltage"].values)
-    info_data.append(csv[17:-4])
+    if csv.endswith(".csv"):
+        tmp_path_2 = f"{folder}/current_mirror/{csv}"
+        df = pd.read_csv(tmp_path_2)
+        time_data.append(df["time"].values)
+        dv = df["capacitor_voltage"].values - df["vco_out"].values
+        dv_data.append(dv)
+        r1_voltage_data.append(df["r1_voltage"].values)
+        r2_voltage_data.append(df["r2_voltage"].values)
+        info_data.append(csv[17:-4])
 
 
 def calculate_filtered_gradient(time, dV, C, ax, window_sections=50):
@@ -59,14 +61,10 @@ def calculate_filtered_gradient(time, dV, C, ax, window_sections=50):
             time_values_iplot[i],
             np.full_like(
                 time_values_iplot[i],
-                (
-                    current_values[i]
-                    if abs(current_values[i]) < 1.25 * mean_current
-                    else 0
-                ),
+                (current_values[i] if abs(current_values[i]) < 1.1 * mean_current else 0),
             ),
             color="red",
-            label="measured current" if i == 0 else "",
+            label="capacitor current" if i == 0 else "",
         )
 
 
@@ -90,7 +88,6 @@ for i in range(len(info_data)):
 
     # LEFT: Voltage against time
     ax1.plot(time_data[i], dv_data[i], color="purple", label="Capacitor voltage")
-    ax1.plot(time_data[i], vco_out_data[i], color="black", label="VCO output")
     ax1.plot(time_data[i], r1_voltage_data[i], color="blue", label="R1 voltage")
     ax1.plot(time_data[i], r2_voltage_data[i], color="red", label="R2 voltage")
 
@@ -107,19 +104,14 @@ for i in range(len(info_data)):
     ax2.set_ylabel("Current (A)")
     ax2.set_xlabel("Time (s)")
     ax2.set_xlim(left=0)
-    freq = freqFinder(vco_out_data[i], time_data[i])
+    freq = [418, 4247, 40160]  # double true value
     dVpp = 3.7
-    theory_current = 2 * C_val * dVpp * freq
-    I_in = np.mean(r1_voltage_data[i]) / data_to_val(R1) + np.mean(
-        r2_voltage_data[i]
-    ) / data_to_val(R2)
+    theory_current = 2 * C_val * dVpp * 0.5 * freq[i]
+    I_in = r1_voltage_data[i] / data_to_val(R1) + (r2_voltage_data[i]) / data_to_val(R2)
     ax2.axhline(y=0, color="black", linewidth=1.5)
-    ax2.axhline(y=I_in, color="blue", label=r"$I_{in}$", linestyle="--")
-    ax2.axhline(y=-I_in, color="blue", linestyle="--")
-    ax2.axhline(
-        y=theory_current, color="blue", label="Theoretical current", linestyle="--"
-    )
-    ax2.axhline(y=-theory_current, color="blue", linestyle="--")
+    ax2.plot(time_data[i], I_in, label="Measured current", color="orange")
+    #ax2.axhline(y=theory_current, color="blue", label="Theoretical current", linestyle="--")
+    # ax2.axhline(y=-theory_current, color="blue", linestyle="--")
     ax2.legend()
     ax1.set_title(f"Voltage difference over capacitor (C={C}, R1={R1}, R2={R2})")
     ax2.set_title(f"Current over capacitor (C={C}, R1={R1}, R2={R2})")

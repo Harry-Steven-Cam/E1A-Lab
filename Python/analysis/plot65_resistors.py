@@ -8,8 +8,8 @@ from line_finder import *
 
 folder = r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/data/6.5"
 save_location = r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.5/RCRcombos"
-save_data = True
-show_plots = False
+save_data = False
+show_plots = True
 # Ensure the save directory exists
 os.makedirs(save_location, exist_ok=True)
 
@@ -45,7 +45,7 @@ for c in capacitance:
                 parse_filename(filename_no_ext)
             )  # R12 C values for corresponding data
 
-combined_plot_data = {"r1": [], "r2": [], "c": []}
+combined_plot_data = {"r1": [], "r2": [], "c": [], "r1_err": []}
 
 
 # Main plotting function
@@ -59,6 +59,7 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
     max_freq = 0
     # ---------------------- gathering values for 1/R1 and 1/R2 plots -----------------------------
     k_o_values = []
+    k_err_values = []
     f_min_values = []
     x_data_values = []
     # ---------------------- plot each line -----------------------------
@@ -87,6 +88,7 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
             error_y=error_freq,
         )
         k_o = np.absolute(2 * np.pi * gradient * 1e3)
+        k_err = np.absolute(2 * np.pi * m_err * 1e3)
         f_min = frequency_data[idx][0] * 1e3
         f_centre = (frequency_data[idx][-1] + frequency_data[idx][0]) * 1e3 / 2
         f_ratio = (
@@ -98,6 +100,7 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
             else r"${\infty}$"
         )
         k_o_values.append(k_o)
+        k_err_values.append(k_err)
         f_min_values.append(f_min)
         """text = (
             label
@@ -155,7 +158,11 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
             {
                 "x": np.asarray(x_data_values, dtype=float),
                 "y": np.asarray(k_o_values, dtype=float),
-                "label": (f"R2={format_val(fixed_params['r2'])}, " f"C={format_val(fixed_params['c'])}"),
+                "y_err": np.asarray(k_err_values, dtype=float),
+                "label": (
+                    f"R2={format_val(fixed_params['r2'])}, "
+                    f"C={format_val(fixed_params['c'])}"
+                ),
             }
         )
     elif varying_param == "r2":
@@ -163,7 +170,10 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
             {
                 "x": np.asarray(x_data_values, dtype=float),
                 "y": np.asarray(f_min_values, dtype=float),
-                "label": (f"R1={format_val(fixed_params['r1'])}, " f"C={format_val(fixed_params['c'])}"),
+                "label": (
+                    f"R1={format_val(fixed_params['r1'])}, "
+                    f"C={format_val(fixed_params['c'])}"
+                ),
             }
         )
     elif varying_param == "c":
@@ -173,7 +183,8 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
                 "x": np.asarray(x_data_values, dtype=float),
                 "y": inverse_k_o_values,
                 "label": (
-                    f"R1={format_val(fixed_params['r1'])}, " f"R2={format_val(fixed_params['r2'])}"
+                    f"R1={format_val(fixed_params['r1'])}, "
+                    f"R2={format_val(fixed_params['r2'])}"
                 ),
             }
         )
@@ -183,47 +194,133 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
     datasets = combined_plot_data[param]
     if not datasets:
         return
+
     plt.figure()
     matplot_styles()
     ax = plt.gca()
+
     for i, data in enumerate(datasets):
         x = data["x"]
         y = data["y"]
+
+        # Get uncertainty in y (only for R1 plot)
+        y_err = data.get("y_err", np.zeros_like(y))
+
         # Remove invalid values
-        valid = np.isfinite(x) & np.isfinite(y)
+        valid = np.isfinite(x) & np.isfinite(y) & np.isfinite(y_err) & (y_err > 0)
+
         x = x[valid]
         y = y[valid]
+        y_err = y_err[valid]
+
         if len(x) == 0:
             continue
+
         colour = colours[i % len(colours)]
-        # Plot experimental data
-        plt.plot(x, y, marker="x", linestyle="none", color=colour, alpha=0.8)
+
+        # Plot experimental data with error bars
+        plt.errorbar(
+            x,
+            y,
+            yerr=y_err,
+            marker="x",
+            linestyle="none",
+            color=colour,
+            alpha=0.8,
+            capsize=3,
+        )
+
         # Fit and calculate R squared
         r_squared = np.nan
+        gradient = np.nan
+        gradient_err = np.nan
+
         if len(x) >= 2 and len(np.unique(x)) >= 2:
             try:
-                x_fit, y_fit, p, p_err = get_poly_fit(x, y)
-                gradient = p[0]
-                gradient_err = p_err[0]
-                intercept = p[1]
-                intercept_err = p_err[1]
-                r_squared = p_err[2]
-                plt.plot(x_fit, y_fit, linestyle="--", color=colour, alpha=0.8)
-            except (RuntimeError, ValueError) as e:
+                if param == "r1":
+
+                    # Weighted linear fit using KO uncertainties
+                    weights = 1 / y_err
+
+                    # Check that uncertainties and weights are valid
+                    if (
+                        np.all(np.isfinite(weights))
+                        and np.all(weights > 0)
+                        and len(x) >= 2
+                        and len(np.unique(x)) >= 2
+                    ):
+
+                        p, cov = np.polyfit(
+                            x,
+                            y,
+                            deg=1,
+                            w=weights,
+                            cov="unscaled",
+                        )
+                    gradient = p[0]
+                    intercept = p[1]
+
+                    gradient_err = np.sqrt(cov[0, 0])
+                    intercept_err = np.sqrt(cov[1, 1])
+
+                    # Generate fitted line
+                    x_fit = np.linspace(min(x), max(x), 200)
+                    y_fit = np.polyval(p, x_fit)
+
+                    # Calculate R squared
+                    y_pred = np.polyval(p, x)
+                    ss_res = np.sum((y - y_pred) ** 2)
+                    ss_tot = np.sum((y - np.mean(y)) ** 2)
+
+                    r_squared = 1 - ss_res / ss_tot if ss_tot != 0 else np.nan
+
+                else:
+                    # Retain your original fitting method
+                    x_fit, y_fit, p, p_err = get_poly_fit(x, y)
+
+                    gradient = p[0]
+                    gradient_err = p_err[0]
+                    intercept = p[1]
+                    intercept_err = p_err[1]
+                    r_squared = p_err[2]
+
+                plt.plot(
+                    x_fit,
+                    y_fit,
+                    linestyle="--",
+                    color=colour,
+                    alpha=0.8,
+                )
+
+            except (RuntimeError, ValueError, np.linalg.LinAlgError) as e:
                 print(f"Fit failed for {data['label']}: {e}")
+
         # Legend entry
         m_unit = (
             r"Hz/V$\Omega$"
             if param == "r1"
             else r"Hz/V$\Omega$" if param == "r2" else "HzF/V"
         )
+
+        if np.isfinite(gradient) and np.isfinite(gradient_err):
+            gradient_text = f"{gradient:.3e} ± {gradient_err:.3e}"
+        else:
+            gradient_text = "Fit unavailable"
+
         legend_label = (
             data["label"]
-            + f", m = {format_sci_err(gradient, gradient_err)} {m_unit}"
+            + f", m = {gradient_text} {m_unit}"
             + f", R² = {r_squared:.4f}"
         )
-        # Add a legend handle using the same colour
-        plt.plot([], [], color=colour, marker="x", linestyle="--", label=legend_label)
+
+        plt.plot(
+            [],
+            [],
+            color=colour,
+            marker="x",
+            linestyle="--",
+            label=legend_label,
+        )
 
     plt.ylabel(ylabel)
     plt.xlabel(xlabel)
@@ -234,12 +331,12 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
 
     plt.legend(fontsize=7)
     plt.tight_layout()
+
     if save_data:
         plt.savefig(os.path.join(save_location, filename), dpi=300)
 
     if show_plots:
         plt.show()
-        pass
     else:
         plt.close()
 

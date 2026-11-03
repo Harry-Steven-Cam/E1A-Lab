@@ -27,10 +27,12 @@ picoscope.picoscope_open()
 time = 0.02
 samplerate = 1e7
 picoscope.scope_prepare(
-    capture_time=time,  # Traces will be captured over this time period (in seconds).
-    samples=time
-    * samplerate,  # Number of samples to capture over the capture_time period.
+    capture_time=0.02,  # Traces will be captured over this time period (in seconds).
+    samples=50_000,  # Number of samples to capture over the capture_time period.
     a_range=10,  # Voltage range for channel A (in volts).
+    b_range=10,  # Voltage range for channel A (in volts).
+    c_range=10,  # Voltage range for channel A (in volts).
+    d_range=10,  # Voltage range for channel A (in volts).
     a_probe="x10",  # Probe attenuation for channel A (x1 is the default).
     b_probe="x10",  # Probe attenuation for channel A (x1 is the default).
     c_probe="x10",  # Probe attenuation for channel A (x1 is the default).
@@ -70,17 +72,17 @@ def save_scope(voltage, time, volts):
 # picoscope.scope_monitor()
 print("running")
 
-frequency = 18_000
+#frequency = 18_000
 #FIXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-voltage = (1.88 / 5) * 3  # should be around 18kHz
+voltage = (1.8 / 5) * 3  # should be around 18kHz
 
 set_awg(voltage)
 time, volts = picoscope.scope_capture()
-voltage_data_capacitor = volts[0]
-voltage_data_vco_out = volts[1]
+voltage_data_capacitor = volts[0] #pin 7
+voltage_data_vco_out = volts[1] #pin 6
+
 voltage_data_r1 = volts[2]
 voltage_data_r2 = volts[3]
-# print(voltage_data_pin_7[0])
 time = np.asarray(time)
 
 plot_styles = {"marker": "x", "linestyle": "none"}
