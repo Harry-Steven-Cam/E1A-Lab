@@ -4,7 +4,7 @@ import glob
 import pandas as pd
 
 # 1. Set the folder path containing all your raw CSV files
-folder_path = r"C:\Users\hs916\Desktop\PLL hs916\data\6.6\PC2\RCvary-alt"
+folder_path = r"C:\Users\harry\Desktop\university work\year 3\E1A-Lab\Python\analysis\old"
 
 # Find all CSV files in that folder
 csv_files = glob.glob(os.path.join(folder_path, "*.csv"))

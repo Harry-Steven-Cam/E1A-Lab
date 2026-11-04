@@ -8,7 +8,7 @@ from line_finder import *
 
 # Settings
 PC = 1
-save_data = True
+save_data = False
 show_plot = True
 threshold = 0.02
 folder = rf"./data/6.6/PC{PC}/RCvary"
@@ -25,9 +25,11 @@ fc_values = []
 percentage_values = []
 frequency_ranges = []
 
+ratio_base = 1
+
 # Ratio limits
-ratio_min = 1 - threshold
-ratio_max = 1 + threshold
+ratio_min = ratio_base - threshold
+ratio_max = ratio_base + threshold
 
 # AWG frequency limits (kHz)
 freq_min = 10
