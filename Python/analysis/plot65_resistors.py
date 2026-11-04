@@ -19,8 +19,8 @@ save_location = (
     r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.5/RCRcombos"
 )
 
-save_data = True
-show_plots = False
+save_data = False
+show_plots = True
 
 os.makedirs(save_location, exist_ok=True)
 

@@ -162,6 +162,7 @@ def plot_data(
     alpha=1,
     linestyle="none",
     marker="x",
+    ylim=None,
 ):
     plt.title(title)
     if np.ndim(x[0]) > 0:
@@ -179,6 +180,8 @@ def plot_data(
     if names:
         plt.xlabel(names[0])
         plt.ylabel(names[1])
+    if ylim:
+        plt.ylim(ylim)
 
     if save:
         os.makedirs(save_location, exist_ok=True)

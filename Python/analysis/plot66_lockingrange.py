@@ -25,18 +25,23 @@ fc_values = []
 percentage_values = []
 frequency_ranges = []
 
-ratio_base = 1
-
 # Ratio limits
+ratio_base = 1
 ratio_min = ratio_base - threshold
 ratio_max = ratio_base + threshold
 
 # AWG frequency limits (kHz)
-freq_min = 10
-freq_max = 30
+#freq_min, freq_max = 10, 30
+#ignore_range = ["60.0(kHz)", "120.0(kHz)", "240.0(kHz)"]
+
+# for 7th harmonic
+freq_min,freq_max = 40,60
+ignore_range = ["30.0(kHz)"]
 
 for csv in file_names:
-    if "60" in csv:
+
+    # Read CSV
+    if any(file in csv for file in ignore_range):
         continue
     # Read CSV
     tmp_path = os.path.join(folder, csv)
@@ -98,7 +103,6 @@ for csv in file_names:
     fc_values.append(fc_value)
     percentage_values.append(percentage)
     frequency_ranges.append(frequency_range)
-
 
 
 # Convert to numpy arrays
@@ -184,13 +188,19 @@ axes2[1].set_title("Frequency range within ratio band")
 
 
 # Overall title
-fig2.suptitle(rf"PC{PC}: Analysing locking, " rf"$f_{{AWG}}$ = {freq_min} to {freq_max} kHz")
+fig.suptitle(
+    rf"PC{PC}: Analysing locking with various RC filters, "
+    + "\n"
+    + rf"$f_{{AWG}}$ = {freq_min} to {freq_max} kHz"
+    + "\n"
+    + f" Analysis of the {'1st harmonic' if ratio_base == 1 else f"{ratio_base}th harmonic"}"
+)
 
 plt.tight_layout()
 
 # Save figure separately
 if save_data:
-    file_path = os.path.join(save_location, f"ratio_band_summary_ln_fc_PC{PC}.svg")
+    file_path = os.path.join(save_location, f"ratio_band_vs_noise_PC{PC}_ratio={ratio_base}.svg")
     plt.savefig(file_path, dpi=300, bbox_inches="tight")
     print(f"Saved figure to {file_path}")
 
