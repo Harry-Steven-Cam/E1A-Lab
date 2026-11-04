@@ -196,6 +196,7 @@ def plot_2x2(
     file_name=None,
     save=False,
     show_plot=True,
+    ylimit=None,
 ):
     matplot_styles()
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
@@ -211,6 +212,10 @@ def plot_2x2(
     for i in range(min(4, len(x))):
         ax = axes[i]
         matplot_styles()
+        if ylimit is not None and ylimit[i] is not None:
+            difference =  ylimit[i][1]-ylimit[i][0]
+            ax.set_ylim(ylimit[i])
+            ax.set_yticks(np.arange(ylimit[i][0], ylimit[i][1]+1, difference//6))
 
         # If the first element of subplot i has a dimension > 0, it contains nested arrays
         if np.ndim(x[i][0]) > 0:

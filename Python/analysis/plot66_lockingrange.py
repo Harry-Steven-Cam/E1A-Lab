@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -7,329 +6,198 @@ import os
 from plot_style import *
 from line_finder import *
 
-
-# --------------------------------------------------
-# SETTINGS
-# --------------------------------------------------
-
-PC =1
-
+# Settings
+PC = 1
+save_data = True
+show_plot = True
+threshold = 0.02
 folder = rf"./data/6.6/PC{PC}/RCvary"
 save_location = rf"./analysis_images/6.6/PC{PC}/RCvary"
 
-save_data=False
-show_plot=True
+file_names = sorted([f for f in os.listdir(folder) if f.lower().endswith(".csv")])
 
 os.makedirs(save_location, exist_ok=True)
 
-# Filename frequency range to select
-freq_start = 10.0
-freq_end = 30.0
+print("Running ratio analysis...")
 
-# Locking conditions
-ratio_tolerance = 0.05       # Ratio must be within 1 of unity (%)
-max_phase_span = 30          # Maximum phase variation in degrees
-phase_window = 7             # Number of samples in rolling window
-min_phase_samples = 5        # Minimum valid samples in window
+# Store results
+fc_values = []
+percentage_values = []
+frequency_ranges = []
 
-min_locked_points = 3
+# Ratio limits
+ratio_min = 1 - threshold
+ratio_max = 1 + threshold
 
-
-# --------------------------------------------------
-# FIND CSV FILES WITH THE CORRECT FREQUENCY RANGE
-# --------------------------------------------------
-
-file_names = []
-
-for f in os.listdir(folder):
-
-    if f.lower().endswith(".csv"):
-
-        filename = f.lower()
-
-        if "f10.0(khz) to 30.0(khz)" in filename:
-            file_names.append(f)
-
-file_names = sorted(file_names)
-
-print(f"Found {len(file_names)} files with frequency range 10-30 kHz")
-
-if len(file_names) == 0:
-    raise ValueError("No CSV files found with the specified frequency range.")
-
-
-# --------------------------------------------------
-# HELPER FUNCTIONS
-# --------------------------------------------------
-
-def get_fc_hz(filename):
-
-    params = parse_filename(filename)
-    fc = params["fc"]
-
-    if fc is None:
-        return np.nan
-
-    fc = str(fc).lower().strip()
-
-    if fc.endswith("khz"):
-        return float(fc[:-3]) * 1000
-
-    elif fc.endswith("hz"):
-        return float(fc[:-2])
-
-    elif fc.endswith("k"):
-        return float(fc[:-1]) * 1000
-
-    else:
-        return float(fc)
-
-
-def unwrap_phase(phase):
-
-    """
-    Unwrap phase separately for each continuous group of
-    valid measurements, avoiding NaNs spreading through
-    the entire phase array.
-    """
-
-    phase = np.asarray(phase, dtype=float)
-
-    unwrapped = np.full(len(phase), np.nan)
-
-    valid_indices = np.where(np.isfinite(phase))[0]
-
-    if len(valid_indices) == 0:
-        return unwrapped
-
-    # Find separate continuous groups of valid measurements
-    breaks = np.where(np.diff(valid_indices) > 1)[0] + 1
-
-    groups = np.split(valid_indices, breaks)
-
-    for group in groups:
-
-        unwrapped[group] = np.rad2deg(
-            np.unwrap(np.deg2rad(phase[group]))
-        )
-
-    return unwrapped
-
-
-def find_longest_lock(locked, freq):
-
-    """
-    Finds the longest continuous region where both the
-    frequency ratio and phase conditions are satisfied.
-    """
-
-    indices = np.where(locked)[0]
-
-    if len(indices) == 0:
-        return None
-
-    # Split into continuous groups
-    breaks = np.where(np.diff(indices) > 1)[0] + 1
-
-    groups = np.split(indices, breaks)
-
-    # Find group with largest frequency span
-    longest = max(
-        groups,
-        key=lambda x: freq[x[-1]] - freq[x[0]]
-    )
-
-    if len(longest) < min_locked_points:
-        return None
-
-    return longest[0], longest[-1], len(longest)
-
-
-# --------------------------------------------------
-# ANALYSE EACH CSV FILE
-# --------------------------------------------------
-
-matplot_styles()
-
-results = []
+# AWG frequency limits (kHz)
+freq_min = 10
+freq_max = 30
 
 for csv in file_names:
-
-    print(f"\nAnalysing: {csv}")
-
+    if "60" in csv:
+        continue
     # Read CSV
     tmp_path = os.path.join(folder, csv)
     df = pd.read_csv(tmp_path)
 
-    # Extract data (all frequencies in kHz)
-    time = df["time"].values
+    # Extract data
     awg_freq = df["awg_freq"].values
     vco_freq = df["vco_freq"].values
-    phase_diff = df["phase_diff"].values
 
-    # Calculate or extract ratio
     if "ratio" in df.columns:
         ratio = df["ratio"].values
     else:
         ratio = awg_freq / vco_freq
 
-    # Extract cutoff frequency
-    fc = get_fc_hz(csv)
-    # Remove invalid frequency and ratio values
-    valid = (
-        np.isfinite(awg_freq) &
-        np.isfinite(ratio)
-    )
+    # Extract fc from filename
+    params = parse_filename(csv)
+    fc = params["fc"]
 
-    time = time[valid]
-    awg_freq = awg_freq[valid]
-    ratio = ratio[valid]
-    phase_diff = phase_diff[valid]
+    if fc is None:
+        print(f"Skipping {csv}: no fc found")
+        continue
 
-    # Sort by time (sweep order)
-    order = np.argsort(time)
+    fc_value = data_to_val(fc)
 
-    time = time[order]
-    awg_freq = awg_freq[order]
-    ratio = ratio[order]
-    phase_diff = phase_diff[order]
+    # --------------------------------
+    # Filter data to 10-30 kHz only
+    # --------------------------------
+    freq_mask = (awg_freq >= freq_min) & (awg_freq <= freq_max)
 
-    # --------------------------------------------------
-    # CONDITION 1: FREQUENCY RATIO CLOSE TO UNITY
-    # --------------------------------------------------
+    filtered_freq = awg_freq[freq_mask]
+    filtered_ratio = ratio[freq_mask]
 
-    ratio_locked = (
-        np.abs(ratio - 1.0) <= ratio_tolerance
-    )
+    # Total number of datapoints in 10-30 kHz
+    total_points = len(filtered_ratio)
 
-    # --------------------------------------------------
-    # CONDITION 2: PHASE DIFFERENCE REMAINS BOUNDED
-    # --------------------------------------------------
+    if total_points == 0:
+        print(f"Skipping {csv}: no data between 10 and 30 kHz")
+        continue
 
-    phase_unwrapped = unwrap_phase(phase_diff)
+    # --------------------------------
+    # Find points where ratio is 1 +/- 5%
+    # --------------------------------
+    in_band = (filtered_ratio >= ratio_min) & (filtered_ratio <= ratio_max)
 
-    # Calculate rolling phase range
-    phase_series = pd.Series(phase_unwrapped)
+    number_in_band = np.count_nonzero(in_band)
 
-    phase_max = phase_series.rolling(
-        window=phase_window,
-        center=True,
-        min_periods=min_phase_samples
-    ).max()
+    # Calculate percentage
+    percentage = (number_in_band / total_points) * 100
 
-    phase_min = phase_series.rolling(
-        window=phase_window,
-        center=True,
-        min_periods=min_phase_samples
-    ).min()
-
-    phase_span = (phase_max - phase_min).to_numpy()
-
-    phase_locked = (
-        np.isfinite(phase_span) &
-        (phase_span <= max_phase_span)
-    )
-
-    # Both conditions must be satisfied
-    locked = ratio_locked & phase_locked
-
-    # Percentage of ratio-unity points that pass phase test
-    n_ratio = np.sum(ratio_locked)
-
-    if n_ratio > 0:
-        lock_percentage = 100 * np.sum(locked) / n_ratio
+    # --------------------------------
+    # Calculate frequency range
+    # --------------------------------
+    if number_in_band > 0:
+        frequency_range = np.max(filtered_freq[in_band]) - np.min(filtered_freq[in_band])
     else:
-        lock_percentage = 0
-
-    # --------------------------------------------------
-    # FIND CONTINUOUS LOCKING REGION
-    # --------------------------------------------------
-
-    run = find_longest_lock(locked, awg_freq)
-
-    if run is None:
-
-        lock_start = np.nan
-        lock_end = np.nan
-        locking_range = 0
-        n_locked = 0
-
-        print(
-            "No continuous locking region found. "
-            f"Ratio-unity points: {n_ratio}, "
-            f"phase-stable percentage: {lock_percentage:.1f}%"
-        )
-
-    else:
-
-        start, end, n_locked = run
-
-        lock_start = awg_freq[start]
-        lock_end = awg_freq[end]
-
-        locking_range = lock_end - lock_start
-
-        print(f"fc = {fc:.3f} kHz")
-        print(f"Locking start = {lock_start:.3f} kHz")
-        print(f"Locking end = {lock_end:.3f} kHz")
-        print(f"Locking range = {locking_range:.3f} kHz")
-        print(f"Locked points = {n_locked}")
-
-    print(f"Percentage passing phase test = {lock_percentage:.1f}%")
+        frequency_range = np.nan
 
     # Store results
-    results.append({
-
-        "filename": csv,
-        "fc (Hz)": fc,
-        "locking_start (kHz)": lock_start,
-        "locking_end (kHz)": lock_end,
-        "locking_range (kHz)": locking_range,
-        "locked_points": n_locked,
-        "ratio_unity_points": n_ratio,
-        "phase_locked_percentage": lock_percentage
-
-    })
+    fc_values.append(fc_value)
+    percentage_values.append(percentage)
+    frequency_ranges.append(frequency_range)
 
 
-# --------------------------------------------------
-# SAVE RESULTS TO CSV
-# --------------------------------------------------
 
-results_df = pd.DataFrame(results)
-# Display results in the console instead of saving a CSV
+# Convert to numpy arrays
+fc_values = np.array(fc_values, dtype=float)
+percentage_values = np.array(percentage_values, dtype=float)
+frequency_ranges = np.array(frequency_ranges, dtype=float)
+
+# Sort results by fc
+sort_indices = np.argsort(fc_values)
+
+fc_values = fc_values[sort_indices]
+percentage_values = percentage_values[sort_indices]
+frequency_ranges = frequency_ranges[sort_indices]
 
 
-# --------------------------------------------------
-# PLOT LOCKING RANGE AGAINST FC
-# --------------------------------------------------
+# --------------------------------
+# Plot results side by side
+# --------------------------------
 
-plot_df = results_df.dropna(
-    subset=["fc (Hz)"]
-).copy()
+matplot_styles()
 
-# Remove zero or negative fc values (ln is undefined)
-plot_df = plot_df[plot_df["fc (Hz)"] > 0]
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
-plot_df = plot_df.sort_values("fc (Hz)")
+# Graph 1: Percentage of points within ratio band
+axes[0].plot(fc_values, percentage_values, marker="x", linestyle="none")
 
-if len(plot_df) > 0:
+axes[0].set_xlabel(r"$f_c$ (Hz)")
+axes[0].set_ylabel(rf"Datapoints with ${ratio_min} \leq R \leq {ratio_max}$ (%)")
+axes[0].set_title("Percentage of points within ratio band")
+axes[0].set_ylim(0, 100)
 
-    plot_data(
-        np.log(plot_df["fc (Hz)"].values),
-        plot_df["locking_range (kHz)"].values,
-        names=[
-            r"$\ln(f_c/\mathrm{Hz})$",
-            "Locking range (kHz)"
-        ],
-        title="Locking range against ln(fc)",
-        save_location=save_location,
-        file_name="locking_range_vs_ln_fc",
-        save=save_data,
-        show_plot=show_plot,
-        marker="x",
-        linestyle="none"
-    )
 
+# Graph 2: Frequency range of points within ratio band
+axes[1].plot(fc_values, frequency_ranges, marker="x", linestyle="none")
+
+axes[1].set_xlabel(r"$f_c$ (Hz)")
+axes[1].set_ylabel("AWG frequency range (kHz)")
+axes[1].set_title("Frequency range within ratio band")
+
+
+# Overall title
+fig.suptitle(rf"PC{PC}: Analysing locking, " rf"$f_{{AWG}}$ = {freq_min} to {freq_max} kHz")
+
+plt.tight_layout()
+
+# Save figure
+if False:
+    file_path = os.path.join(save_location, f"ratio_band_summary_PC{PC}.svg")
+    plt.savefig(file_path, dpi=300, bbox_inches="tight")
+    print(f"Saved figure to {file_path}")
+
+# Show figure
+if show_plot:
+    plt.show()
 else:
-    print("No valid fc values found for plotting.")
+    plt.close()
+
+# --------------------------------
+# Second figure: ln(fc) on x-axis
+# --------------------------------
+
+ln_fc = np.log(fc_values)
+
+matplot_styles()
+
+fig2, axes2 = plt.subplots(1, 2, figsize=(12, 5))
+
+# Graph 1: Percentage within ratio band
+axes2[0].plot(ln_fc, percentage_values, marker="x", linestyle="none")
+
+axes2[0].set_xlabel(r"$\ln(f_c / \mathrm{Hz})$")
+axes2[0].set_ylabel(rf"Datapoints with ${ratio_min} \leq R \leq {ratio_max}$ (%)")
+axes2[0].set_title("Percentage of points within ratio band")
+axes2[0].set_ylim(0, 100)
+
+
+# Graph 2: Frequency range within ratio band
+axes2[1].plot(ln_fc, frequency_ranges, marker="x", linestyle="none")
+
+axes2[1].set_xlabel(r"$\ln(f_c / \mathrm{Hz})$")
+axes2[1].set_ylabel("AWG frequency range (kHz)")
+axes2[1].set_title("Frequency range within ratio band")
+
+
+# Overall title
+fig2.suptitle(rf"PC{PC}: Analysing locking, " rf"$f_{{AWG}}$ = {freq_min} to {freq_max} kHz")
+
+plt.tight_layout()
+
+# Save figure separately
+if save_data:
+    file_path = os.path.join(save_location, f"ratio_band_summary_ln_fc_PC{PC}.svg")
+    plt.savefig(file_path, dpi=300, bbox_inches="tight")
+    print(f"Saved figure to {file_path}")
+
+# Show figure
+if show_plot:
+    plt.show()
+else:
+    plt.close()
+
+print("Completed ln(fc) plots")
+
+print("Completed")

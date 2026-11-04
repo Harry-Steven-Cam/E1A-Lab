@@ -33,6 +33,11 @@ errors from curve fit, noise in V and sample rate limitations
 
 66
 
+RCvary:
+Pc1 likes high frequency
+
+Pc2 doesnt like high frequencies
+
 equations?
 
 link theory to results and any quirks
@@ -42,6 +47,10 @@ quantisation:
 delta V = Vrange/2^8bits, so max res is 1/2 deltaV
 P(x)=1/dV or any point in the bin--> so variance = int +1/2dv to -1/2dV x^2p(x) dx etc 
 to give sigma V below
+
++-5% C and resistors
+plot fit, sample rate max 
+voltage sample limit
 
 references:
 https://www.ti.com/lit/an/scha002a/scha002a.pdf --formulae

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import scipy
 
 from plot_style import *
 from line_finder import *
@@ -11,8 +12,8 @@ save_location = (
     r"C:/Users/harry/Desktop/university work/year 3/E1A-lab/analysis_images/6.5/current_mirror"
 )
 
-save_data = False
-show_plot = True
+save_data = True
+show_plot = False
 
 file_names = os.listdir(folder)
 capacitance = file_names
@@ -41,31 +42,80 @@ for csv in subfolders:
 def calculate_filtered_gradient(time, dV, C, ax, window_sections=50):
     time_sections = []
     voltage_sections = []
-    for i in range(window_sections - 1):
+
+    final_time_data = []
+    final_current_data = []
+    final_current_errors = []
+
+    # Split the data into sections
+    for i in range(window_sections):
         start_index = len(time) * i // window_sections
         end_index = len(time) * (i + 1) // window_sections
+
+        if end_index - start_index < 2:
+            continue
+
         time_sections.append(time[start_index:end_index])
         voltage_sections.append(dV[start_index:end_index])
-    current_values = []
-    time_values_iplot = []
-    for x in range(len(voltage_sections)):
-        x_fit, y_fit, p, p_err = get_poly_fit(time_sections[x], voltage_sections[x])
-        # goes through each little section
-        current_values.append(p[0] * C)
-        time_values_iplot.append(x_fit)
-    abs_current_values = [abs(val) for val in current_values]
-    mean_current = np.mean(abs_current_values)
-    for i in range(len(current_values)):
-        x_fit, y_fit, p, p_err = get_poly_fit(time, dV)
-        ax.plot(
-            time_values_iplot[i],
-            np.full_like(
-                time_values_iplot[i],
-                (current_values[i] if abs(current_values[i]) < 1.1 * mean_current else 0),
-            ),
-            color="red",
-            label="capacitor current" if i == 0 else "",
-        )
+
+    # Calculate gradient and uncertainty for each section
+    for t_section, v_section in zip(time_sections, voltage_sections):
+
+        x_fit, y_fit, p, p_err = get_poly_fit(t_section, v_section)
+
+        current = abs(p[0] * C)
+        current_error = current * np.sqrt((p_err[0] / p[0]) ** 2 + 0.05**2)
+
+        midpoint_time = (t_section[0] + t_section[-1]) / 2
+
+        final_time_data.append(midpoint_time)
+        final_current_data.append(current)
+        final_current_errors.append(current_error)
+
+    # Calculate mean current
+    mean_current = scipy.stats.trim_mean(final_current_data, proportiontocut=0.1)
+
+    # Filter out values greater than 1.5 times the mean
+    filtered_data = [
+        (t, current, error)
+        for t, current, error in zip(final_time_data, final_current_data, final_current_errors)
+        if current <= 1.2 * mean_current and current >= 0.7 * mean_current
+    ]
+
+    # Separate filtered values
+    final_time_data = [item[0] for item in filtered_data]
+    final_current_data = [item[1] for item in filtered_data]
+    final_current_errors = [item[2] for item in filtered_data]
+
+    # Fit a flat line (mean current)
+    flat_current = scipy.stats.trim_mean(final_current_data, proportiontocut=0.1)
+
+    # Combined relative uncertainty from C and R
+    relative_uncertainty = np.sqrt(0.10**2 + 0.05**2)
+
+    # Uncertainty in the mean current
+    flat_current_error = flat_current * relative_uncertainty
+
+    # Plot current with error bars
+    ax.errorbar(
+        final_time_data,
+        final_current_data,
+        yerr=final_current_errors,
+        color="blue",
+        marker="x",
+        linestyle="none",
+        capsize=3,
+    )
+
+    # Plot flat line of best fit
+    ax.axhline(
+        y=flat_current,
+        color="blue",
+        linestyle="--",
+        label=f"Mean current = {format_sci_err(flat_current,flat_current_error)} A",
+    )
+
+    return final_time_data, final_current_data, final_current_errors, flat_current, flat_current_error
 
 
 plot_styles = {"marker": "x", "linestyle": "none"}
@@ -99,7 +149,7 @@ for i in range(len(info_data)):
     ax1.legend()
 
     # RIGHT: Current against time
-    calculate_filtered_gradient(time_data[i], dv_data[i], C_val, ax2)
+    a,capacitor_current,flat_current_errors,d,flat_current_error = calculate_filtered_gradient(time_data[i], dv_data[i], C_val, ax2)
 
     ax2.set_ylabel("Current (A)")
     ax2.set_xlabel("Time (s)")
@@ -107,12 +157,46 @@ for i in range(len(info_data)):
     freq = [418, 4247, 40160]  # double true value
     dVpp = 3.7
     theory_current = 2 * C_val * dVpp * 0.5 * freq[i]
-    I_in = r1_voltage_data[i] / data_to_val(R1) + (r2_voltage_data[i]) / data_to_val(R2)
+    # Convert resistances to values
+    R1_val = data_to_val(R1)
+    R2_val = data_to_val(R2)
+
+    # Calculate measured input current
+    I_R1 = r1_voltage_data[i] / R1_val
+    I_R2 = r2_voltage_data[i] / R2_val
+
+    I_in = I_R1 + I_R2
+    avg_I_in=np.mean(I_in)
+    # Propagate 5% resistor uncertainties
+    I_in_error = np.sqrt(
+        (0.05 * I_R1)**2 +
+        (0.05 * I_R2)**2
+    )
+    avg_I_in_err=np.mean(I_in_error)
     ax2.axhline(y=0, color="black", linewidth=1.5)
-    ax2.plot(time_data[i], I_in, label="Measured current", color="orange")
-    #ax2.axhline(y=theory_current, color="blue", label="Theoretical current", linestyle="--")
-    # ax2.axhline(y=-theory_current, color="blue", linestyle="--")
-    ax2.legend()
+    ax2.axhline(y=avg_I_in,label=rf"Measured current in = {format_sci_err(avg_I_in,avg_I_in_err)}A",color=colours[1])
+    # Mean currents
+    I_cap = np.mean(capacitor_current)
+
+    # Uncertainty in capacitor current (10% capacitance + fit uncertainty)
+    I_cap_error = flat_current_error
+
+    # Uncertainty in measured current
+    I_meas_error = np.sqrt(np.mean(I_in_error**2))
+
+    # Calculate ratio
+    ratio = I_cap/avg_I_in
+
+    # Propagate uncertainty
+    ratio_error = abs(ratio) * np.sqrt(
+        (I_cap_error / I_cap)**2 +
+        (I_meas_error / avg_I_in)**2
+    )
+
+    ax2.set_ylim(bottom=0)
+    ax2.text(0.015,0.15,f'Gain G = {format_sci_err(ratio, ratio_error)}',transform=ax2.transAxes,fontsize=10)
+
+    ax2.legend(loc="lower left")
     ax1.set_title(f"Voltage difference over capacitor (C={C}, R1={R1}, R2={R2})")
     ax2.set_title(f"Current over capacitor (C={C}, R1={R1}, R2={R2})")
 

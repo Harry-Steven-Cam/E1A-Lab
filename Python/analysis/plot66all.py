@@ -7,12 +7,14 @@ from plot_style import *
 from line_finder import *
 
 # Folder containing CSV files
-PC=1
-save_data=False
-show_plot=True
+PC=2
+save_data=True
+show_plot=False
 folder = rf"./data/6.6/PC{PC}/RCvary"
 file_names = sorted([f for f in os.listdir(folder) if f.lower().endswith(".csv")])
 save_location=rf"./analysis_images/6.6/PC{PC}/RCvary"
+
+print("running")
 
 for csv in file_names:
 
@@ -37,7 +39,7 @@ for csv in file_names:
     c = params["c"] or "N/A"
     fc = params["fc"] or "N/A"
     title = (
-        rf"$R_{{1}}$={format_val(r1)}, $R_{{2}}$={format_val(r2) }, "
+        rf"$PC{PC}, R_{{1}}$={format_val(r1)}, $R_{{2}}$={format_val(r2) }, "
         rf"C={format_val(c)}, $f_{{c}}$={format_sci(data_to_val(fc))}Hz"
     )
     # Create 2x2 figure
@@ -54,4 +56,7 @@ for csv in file_names:
     ]
     save_name=f"fc={fc},{min(awg_freq)}to{max(awg_freq)}"
     # Generate 2x2 figure using your existing function
-    plot_2x2(x, y, names=names, title=title, file_name=save_name,save_location=save_location, save=save_data, show_plot=show_plot)
+    plot_2x2(x, y, names=names, title=title, file_name=save_name,save_location=save_location, save=save_data, show_plot=show_plot,ylimit=[None,(-180,180),None,None])
+
+
+print("completed")

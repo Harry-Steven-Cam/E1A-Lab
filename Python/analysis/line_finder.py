@@ -49,6 +49,11 @@ def get_poly_fit(x, y, order=1, error_data=None,error_x=None,error_y=None, steps
         r_squared = 1 - (ss_res / ss_tot)
 
         return x_fit, linear_model(x_fit, m, c), [m, c], [m_err, c_err, r_squared]
+    else:
+        p = np.polyfit(x,y,order)
+        x_fit = np.linspace(min(x), max(x), steps)
+        y_fit = np.poly1d(p)
+        return x_fit,y_fit(x_fit)
 
 
 def get_voltage_errors(voltage_data, voltage_window=10.0, resolution_bits=8):
