@@ -11,7 +11,7 @@ from line_finder import *
 # -----------------------------
 #NEEDS BETTER WORKING
 
-PC = 2
+PC = 1
 save_data = True
 show_plot = False
 
@@ -305,7 +305,7 @@ for csv in file_names:
 
         if save_data:
             fig.savefig(
-                os.path.join(save_location, save_name + "_KD.png"), dpi=300, bbox_inches="tight"
+                os.path.join(save_location, save_name + "_KD.svg"), dpi=300, bbox_inches="tight"
             )
 
         if show_plot:

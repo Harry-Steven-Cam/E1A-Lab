@@ -16,7 +16,9 @@ file_names = sorted([f for f in os.listdir(folder) if f.lower().endswith(".csv")
 
 os.makedirs(save_location, exist_ok=True)
 
-ignore_data = ["f0.0(kHz)", "30.0(kHz)", "60.0(kHz)", "240.0(kHz)"]
+#ignore_data = ["f0.0(kHz)", "30.0(kHz)", "60.0(kHz)", "240.0(kHz)"]
+ignore_data = []
+
 
 print("running")
 for csv in file_names:
@@ -31,7 +33,8 @@ for csv in file_names:
     time = df["time"].values
     awg_out = df["awg_out"].values
     pll_out = df["pll_out"].values
-
+    x_fit=np.linspace(min(time),max(time),200)
+    plt.plot(x_fit,np.sin(x_fit))
     title = None
     x=time
     y=pll_out
