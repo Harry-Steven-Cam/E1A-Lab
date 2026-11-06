@@ -30,8 +30,6 @@ percentage_values = []
 frequency_ranges = []
 
 # Ratio limits
-
-#7 for high harmonic on pc1
 # Ratio limits
 ratio_min = ratio_base - threshold
 ratio_max = ratio_base + threshold
@@ -58,7 +56,7 @@ for csv in file_names:
 
     try:
         noise_str = csv.split("noise=")[1].split("_")[0]
-        noise_value = float(noise_str.replace("mV", ""))
+        noise_value = float(noise_str.replace("mV", ""))*8/3
 
         fc_str = csv.split("fc=")[1].split("Hz")[0]
         fc_value = float(fc_str)
@@ -200,7 +198,7 @@ else:
 
 axes[1].set_ylabel("AWG frequency range (kHz)")
 axes[1].set_title("Frequency range within ratio band")
-axes[1].set_ylim(0)
+axes[1].set_ylim(0,12)
 axes[1].grid(True)
 axes[1].legend()
 

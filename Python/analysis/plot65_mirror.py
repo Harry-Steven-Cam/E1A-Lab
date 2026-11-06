@@ -13,7 +13,7 @@ save_location = (
 )
 
 save_data = True
-show_plot = False
+show_plot = True
 
 file_names = os.listdir(folder)
 capacitance = file_names
@@ -34,8 +34,8 @@ for csv in subfolders:
         time_data.append(df["time"].values)
         dv = df["capacitor_voltage"].values - df["vco_out"].values
         dv_data.append(dv)
-        r1_voltage_data.append(df["r1_voltage"].values)
-        r2_voltage_data.append(df["r2_voltage"].values)
+        r1_voltage_data.append(df["r1_voltage"].values*11/10) #account for probe loading
+        r2_voltage_data.append(df["r2_voltage"].values*11/10)
         info_data.append(csv[17:-4])
 
 
