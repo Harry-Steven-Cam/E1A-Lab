@@ -67,10 +67,10 @@ def matplot_styles(
             "legend.loc": "best",
         }
     )
-    #ax = plt.gca()
-    #if unit_start != unit_end:
-        #ax.set_xticks(np.arange(unit_start, unit_end, unit_jump))
-    #ax.set_box_aspect(9 / 16)
+    ax = plt.gca()
+    if unit_start != unit_end:
+        ax.set_xticks(np.arange(unit_start, unit_end, unit_jump))
+    ax.set_box_aspect(9 / 16)
 
 
 def format_sci(value, decimals=2):

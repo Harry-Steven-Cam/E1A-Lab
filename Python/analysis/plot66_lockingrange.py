@@ -7,8 +7,8 @@ from plot_style import *
 from line_finder import *
 
 # Settings
-PC = 1
-save_data = False
+PC = 2
+save_data = True
 show_plot = True
 threshold = 0.02
 folder = rf"./data/6.6/PC{PC}/RCvary"
@@ -31,12 +31,12 @@ ratio_min = ratio_base - threshold
 ratio_max = ratio_base + threshold
 
 # AWG frequency limits (kHz)
-#freq_min, freq_max = 10, 30
-#ignore_range = ["60.0(kHz)", "120.0(kHz)", "240.0(kHz)"]
+freq_min, freq_max = 10, 30
+ignore_range = ["60.0(kHz)", "120.0(kHz)", "240.0(kHz)"]
 
 # for 7th harmonic
-freq_min,freq_max = 40,60
-ignore_range = ["30.0(kHz)"]
+#freq_min,freq_max = 40,60
+#ignore_range = ["30.0(kHz)"]
 
 for csv in file_names:
 
@@ -139,7 +139,7 @@ axes[0].set_ylim(0, 100)
 axes[1].plot(fc_values, frequency_ranges, marker="x", linestyle="none")
 
 axes[1].set_xlabel(r"$f_c$ (Hz)")
-axes[1].set_ylabel("AWG frequency range (kHz)")
+axes[1].set_ylabel("AWG frequency lock range (kHz)")
 axes[1].set_title("Frequency range within ratio band")
 
 
@@ -183,13 +183,14 @@ axes2[0].set_ylim(0, 100)
 axes2[1].plot(ln_fc, frequency_ranges, marker="x", linestyle="none")
 
 axes2[1].set_xlabel(r"$\ln(f_c / \mathrm{Hz})$")
-axes2[1].set_ylabel("AWG frequency range (kHz)")
+axes2[1].set_ylabel("AWG frequency lock range (kHz)")
 axes2[1].set_title("Frequency range within ratio band")
+axes2[1].set_ylim(0,12)
 
 
 # Overall title
-fig.suptitle(
-    rf"PC{PC}: Analysing locking with various RC filters, "
+fig2.suptitle(
+    rf"PC{PC}: Analysing locking with various RC filters "
     + "\n"
     + rf"$f_{{AWG}}$ = {freq_min} to {freq_max} kHz"
     + "\n"

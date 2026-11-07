@@ -3,6 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import matplotlib as mpl
+from matplotlib.ticker import MultipleLocator, FuncFormatter
+from fractions import Fraction
 
 from plot_style import *
 from line_finder import *
@@ -13,10 +15,10 @@ save_location = (
 )
 file_name = "phase_V_avg_64"
 
-save_fig = False
+save_fig = True
 
 files = os.listdir(folder)
-info_data = ["Phase (°)", "Mean voltage (V)"]
+info_data = ["Phase (rad)", "Mean voltage (V)"]
 title = "PC2 mean voltage output vs\nphase difference between input signals"
 
 x_min = 0
@@ -106,7 +108,27 @@ for csv in files:
             show_plot=False,
         )
         # ---------------------- Graph stuff -----------------------------
-        plt.xlim(x_min, x_max)
+        
+        plt.xlim(0, 360)
+
+        plt.gca().xaxis.set_major_locator(MultipleLocator(30))
+        plt.gca().tick_params(axis="x", labelsize=12)
+
+        def pi_formatter(x, pos):
+            fraction = Fraction(x / 180).limit_denominator(12)
+
+            if fraction == 0:
+                return r"$0$"
+            elif fraction == 1:
+                return r"$\pi$"
+            elif fraction == -1:
+                return r"$-\pi$"
+            elif fraction.denominator == 1:
+                return rf"${fraction.numerator}\pi$"
+            else:
+                return rf"$\frac{{{fraction.numerator}\pi}}{{{fraction.denominator}}}$"
+
+        plt.gca().xaxis.set_major_formatter(FuncFormatter(pi_formatter))
         plt.ylim(y_min, y_max)
         if save_fig:
             os.makedirs(save_location, exist_ok=True)

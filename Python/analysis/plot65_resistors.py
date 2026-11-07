@@ -222,8 +222,12 @@ for c in capacitance:
 # STORAGE FOR COMBINED PLOTS
 # ============================================================
 
-combined_plot_data = {"r1": [], "r2": [], "c": []}
-
+combined_plot_data = {
+    "r1": [],
+    "r2": [],
+    "c": [],
+    "inv_fmin_c": [],
+}
 
 # ============================================================
 # MAIN PLOTTING FUNCTION
@@ -261,6 +265,8 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
 
     x_err_lower_values = []
     x_err_upper_values = []
+
+    inverse_fmin_vs_c_data= []
 
     # --------------------------------------------------------
     # Plot each line
@@ -336,6 +342,25 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
 
         f_min_values.append(f_min)
         f_min_err_values.append(f_min_err)
+        if varying_param == "c":
+
+            C = data_to_val(params["c"])
+
+            inverse_fmin = 1 / f_min
+
+            # Propagate uncertainty: Δ(1/f) = Δf / f²
+            inverse_fmin_err = f_min_err / f_min**2
+
+            inverse_fmin_vs_c_data.append({
+                "C": C,
+                "C_err": COMPONENT_TOLERANCE * C,
+                "inverse_fmin": inverse_fmin,
+                "inverse_fmin_err": inverse_fmin_err,
+                "label": (
+                    f"R1={format_val(params['r1'])}, "
+                    f"R2={format_val(params['r2'])}"
+                )
+            })
 
         # ----------------------------------------------------
         # Update legend
@@ -492,6 +517,42 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
                 ),
             }
         )
+        # ----------------------------------------------------
+        # 1/f_min against capacitance
+        # ----------------------------------------------------
+
+        f_min_array = np.asarray(f_min_values, dtype=float)
+        f_min_err_array = np.asarray(f_min_err_values, dtype=float)
+
+        # Calculate inverse minimum frequency
+        inverse_f_min = np.divide(
+            1,
+            f_min_array,
+            out=np.full_like(f_min_array, np.nan),
+            where=f_min_array > 0
+        )
+
+        # Propagate uncertainty: Δ(1/f) = Δf / f²
+        inverse_f_min_err = np.divide(
+            f_min_err_array,
+            f_min_array**2,
+            out=np.full_like(f_min_array, np.nan),
+            where=f_min_array > 0
+        )
+
+        combined_plot_data["inv_fmin_c"].append(
+            {
+                "x": np.asarray(x_data_values, dtype=float),
+                "x_err": x_errors_fit,
+                "x_err_plot": x_errors_plot,
+                "y": inverse_f_min,
+                "y_err": inverse_f_min_err,
+                "label": (
+                    f"R1={format_val(fixed_params['r1'])}, "
+                    f"R2={format_val(fixed_params['r2'])}"
+                ),
+            }
+        )
 
 
 # ============================================================
@@ -603,15 +664,15 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
         # ----------------------------------------------------
 
         if param == "r1":
-
-            m_unit = r"Hz$\Omega$/V"
+            m_unit = r"Hz $\Omega$/V"
 
         elif param == "r2":
-                
-            m_unit = r"Hz$\Omega$"
+            m_unit = r"Hz $\Omega$"
+
+        elif param == "inv_fmin_c":
+            m_unit = r"s/F"
 
         else:
-
             m_unit = r"V/(Hz F)"
 
         # ----------------------------------------------------
@@ -780,7 +841,17 @@ create_combined_plot(
     filename="Combined_invKO_vs_C.svg",
 )
 
+# ------------------------------------------------------------
+# 4. Inverse minimum frequency against capacitance
+# ------------------------------------------------------------
 
+create_combined_plot(
+    param="inv_fmin_c",
+    ylabel=r"$1/f_{\min}$ (s)",
+    xlabel=r"$C$ (F)",
+    title=r"$1/f_{\min}$ vs $C$",
+    filename="Combined_inv_fmin_vs_C.svg",
+)
 # ============================================================
 # FINISHED
 # ============================================================

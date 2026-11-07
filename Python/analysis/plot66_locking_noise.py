@@ -7,11 +7,11 @@ from plot_style import *
 from line_finder import *
 
 # Settings
-PC = 1
+PC = 2
 save_data = True
 show_plot = True
 threshold = 0.02
-ratio_base = 7 # 7 for pc1 harmonic
+ratio_base = 1 # 7 for pc1 harmonic
 square_wave_voltage_amplitude = 600
 linear_snr=False
 folder = rf"./data/6.6/PC{PC}/Noise"
@@ -35,12 +35,12 @@ ratio_min = ratio_base - threshold
 ratio_max = ratio_base + threshold
 
 # AWG frequency limits (kHz)
-#freq_min,freq_max = 10,30
-#ignore_range = ["60.0(kHz)","120.0(kHz)","240.0(kHz)"]
+freq_min,freq_max = 10,30
+ignore_range = ["60.0(kHz)","120.0(kHz)","240.0(kHz)"]
 
 #for 7th harmonic
-freq_min,freq_max = 100,120
-ignore_range = ["f0.0(kHz)","30.0(kHz)","60.0(kHz)","240.0(kHz)"]
+#freq_min,freq_max = 100,120
+#ignore_range = ["f0.0(kHz)","30.0(kHz)","60.0(kHz)","240.0(kHz)"]
 
 for csv in file_names:
 
@@ -196,7 +196,7 @@ if linear_snr:
 else:
     axes[1].set_xlabel(rf"$SNR_{{dB}}$")
 
-axes[1].set_ylabel("AWG frequency range (kHz)")
+axes[1].set_ylabel("AWG frequency lock range (kHz)")
 axes[1].set_title("Frequency range within ratio band")
 axes[1].set_ylim(0,12)
 axes[1].grid(True)

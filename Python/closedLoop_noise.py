@@ -125,11 +125,11 @@ def phaseFinder(awg_out, vco_out, time, freq):
         return np.nan
 
     # Calculate time differences between corresponding rising edges
-    delays = vco_edges[:n] - awg_edges[:n]
+    delays = vco_edges[:n] - awg_edges[:n] #time diff between edges upto a point n (min length of awg and vco edges)
 
     # Wrap delays into [-T/2, T/2), where T is the signal period
     period = 1 / freq
-    delays = (delays + period / 2) % period - period / 2
+    delays = (delays + period / 2) % period - period / 2 #dt between edges
 
     # Average the delays
     delay = np.mean(delays)
