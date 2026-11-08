@@ -1,1 +1,109 @@
-Python/analysis/test.py
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import os
+
+from plot_style import *
+from line_finder import *
+
+folder = r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/data/6.3"
+save_location = (
+    r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.3"
+)
+file_name = "phase_V_avg_63"
+save_fig = False
+
+files = os.listdir(folder)
+
+info_data = ["Phase (rad)", "Mean voltage (V)"]
+title = "PC1 mean voltage output vs\nphase difference between input signals"
+
+x_min = 0
+x_max = 360
+y_min = 0
+y_max = 5
+unit_start = 0
+unit_end = 361
+unit_jump = 60
+
+for csv in files:
+    if csv[-3:] == "csv":
+        # ---------------------- setting styles and axis -----------------------------
+        matplot_styles(
+            unit_start=unit_start,
+            unit_end=unit_end,
+            unit_jump=unit_jump,
+        )
+        # ---------------------- reading data -----------------------------
+        df = pd.read_csv(f"{folder}/{csv}")
+        phase_data = df["Phase Data"].values * 360
+        mean_voltage_data = df["Mean voltage data"].values
+        # ---------------------- plotting errors and best fits -----------------------------
+        mean_voltage_error = get_voltage_errors(mean_voltage_data, voltage_window=10)
+        print(mean_voltage_error)
+        x_fit, y_fit, p, p_err = get_poly_fit(
+            phase_data[0 : len(phase_data) // 2 + 1],
+            mean_voltage_data[0 : len(mean_voltage_data) // 2 + 1],
+            1,
+            error_data=mean_voltage_error[0 : len(phase_data) // 2 + 1],
+        )
+        x_fit2, y_fit2, p2, p2_err = get_poly_fit(
+            phase_data[len(phase_data) // 2 :],
+            mean_voltage_data[len(mean_voltage_data) // 2 :],
+            1,
+            error_data=mean_voltage_error[len(phase_data) // 2 :],
+        )
+        m=p[0]
+        m2=p2[0]
+        m_err=p_err[0]
+        m2_err=p2_err[0]
+        plt.errorbar(
+            phase_data,
+            mean_voltage_data,
+            yerr=mean_voltage_error,
+            linestyle='none',
+            ecolor="black",
+            capsize=2, 
+        )
+        plt.plot(x_fit, y_fit, color=colours[1], alpha=0.6)
+        plt.plot(x_fit2, y_fit2, color=colours[1], alpha=0.6)
+        # ---------------------- text results -----------------------------
+        plt.text(
+            5,
+            -1.5,
+            rf"$m_{{up}}$ = {format_sci_err(m,m_err,decimals=3)} V/°",
+            fontsize=8,
+        )
+        plt.text(
+            5,
+            -2,
+            rf"$m_{{down}}$ = {format_sci_err(m2,m2_err,decimals=3)} V/°",
+            fontsize=8,
+        )
+        Kd=(m-m2)*180/(2*np.pi)
+        Kd_err=m_err*180/((2*np.pi)*np.sqrt(2))
+        plt.text(
+            5,
+            -2.5,
+            rf"$K_{{D_ PC1}}$={format_sci_err(Kd,Kd_err,decimals=3)} V/rad",
+            fontsize=8,
+        )
+        # ---------------------- plotting data -----------------------------
+        plot_data(
+            x=phase_data,
+            y=mean_voltage_data,
+            names=info_data,
+            title=title,
+            file_name=file_name,
+            save_location=save_location,
+            save=save_fig,
+            show_plot=False,
+        )
+        # ---------------------- Graph stuff -----------------------------
+        plt.xlim(x_min, x_max)
+        plt.ylim(y_min, y_max)
+        if save_fig:
+            os.makedirs(save_location, exist_ok=True)
+            plt.savefig(f"{save_location}/{file_name}.svg")
+        plt.show()

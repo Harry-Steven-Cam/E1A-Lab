@@ -2,135 +2,1121 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-import matplotlib as mpl
-from matplotlib.ticker import MultipleLocator, FuncFormatter
-from fractions import Fraction
-
+from matplotlib.ticker import FuncFormatter, MaxNLocator
+from scipy import odr
 from plot_style import *
 from line_finder import *
+# ============================================================
+# FILENAME / DISPLAY HELPERS
+# ============================================================
 
-folder = r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/data/6.4"
+
+def filename_has_infinite_r2(filename):
+    """Return True when the filename explicitly records R2 as infinity."""
+    compact = str(filename).lower().replace(" ", "")
+    markers = (
+        "r2=inf",
+        "r2=infinity",
+        "r2=∞",
+        r"r2=$\infty$",
+        r"r2=${\infty}$",
+    )
+    return any(marker in compact for marker in markers)
+
+
+def format_resistance(value):
+    """Format a resistance, displaying infinite resistance as LaTeX infinity."""
+    if value is None:
+        return "unparsed"
+
+    try:
+        if np.isinf(float(value)):
+            return r"\infty"
+    except (TypeError, ValueError, OverflowError):
+        pass
+
+    try:
+        numeric_value = float(data_to_val(value))
+        if np.isinf(numeric_value):
+            return r"\infty"
+    except (TypeError, ValueError, OverflowError):
+        value_text = str(value).lower().replace(" ", "")
+        if "inf" in value_text or "∞" in value_text:
+            return r"\infty"
+
+    return format_val(value)
+
+
+# ============================================================
+
+# SETTINGS
+
+# ============================================================
+
+
+folder = r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/data/6.5"
+
+
 save_location = (
-    r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.4"
+    r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.5/RCRcombos"
 )
-file_name = "phase_V_avg_64"
 
-save_fig = True
 
-files = os.listdir(folder)
-info_data = ["Phase (rad)", "Mean voltage (V)"]
-title = "PC2 mean voltage output vs\nphase difference between input signals"
+save_data = False
 
-x_min = 0
-x_max = 360
-y_min = 0
-y_max = 5
-unit_start = 0
-unit_end = 361
-unit_jump = 60
+show_plots = True
 
-for csv in files:
-    if csv[-3:] == "csv":
-        # ---------------------- setting styles and axis -----------------------------
-        matplot_styles(
-            unit_start=unit_start,
-            unit_end=unit_end,
-            unit_jump=unit_jump,
-        )
-        # ---------------------- reading data -----------------------------
-        df = pd.read_csv(f"{folder}/{csv}")
-        phase_data = df["Phase Data"].values * 360
-        mean_voltage_data = df["Mean voltage data"].values
-        # ---------------------- plotting errors and best fits -----------------------------
-        mean_voltage_error = get_voltage_errors(mean_voltage_data, voltage_window=10)
-        x_fit, y_fit, p, p_err = get_poly_fit(
-            phase_data[0 : len(phase_data) // 2],
-            mean_voltage_data[0 : len(mean_voltage_data) // 2],
-            1,
-            error_data=mean_voltage_error[0 : len(phase_data) // 2],
-        )
-        x_fit2, y_fit2, p2, p2_err = get_poly_fit(
-            phase_data[len(phase_data) // 2 :],
-            mean_voltage_data[len(mean_voltage_data) // 2 :],
-            1,
-            error_data=mean_voltage_error[len(phase_data) // 2 :],
-        )
-        m = p[0]
-        m2 = p2[0]
-        m_err = p_err[0]
-        m2_err = p2_err[0]
-        plt.errorbar(
-            phase_data,
-            mean_voltage_data,
-            yerr=mean_voltage_error,
-            linestyle="none",
-            ecolor="black",
-            capsize=2,
-        )
-        plt.plot(x_fit, y_fit, color=colours[1], alpha=0.6)
-        plt.plot(x_fit2, y_fit2, color=colours[1], alpha=0.6)
-        # ---------------------- text results -----------------------------
-        plt.text(
-            5,
-            -1.5,
-            rf"$m_{{up}}$ = {format_sci_err(m,m_err,decimals=3)} V/°",
-            fontsize=8,
-        )
-        plt.text(
-            5,
-            -2,
-            rf"$m_{{down}}$ = {format_sci_err(m2,m2_err,decimals=3)} V/°",
-            fontsize=8,
-        )
-        Kd = (m + m2) * 180 / (2 * np.pi)
-        Kd_err = m_err*180/((2*np.pi)*np.sqrt(2))
-        plt.text(
-            5,
-            -2.5,
-            rf"$K_{{D_ PC2}}$={format_sci_err(Kd,Kd_err,decimals=3)} V/rad",
-            fontsize=8,
-        )
-        plt.text(
-            5,
-            -3,
-            rf"$V_{{Start}}$={mean_voltage_data[0]: .3g}V, $V_{{End}}$={mean_voltage_data[-1]: .3g}V",
-            fontsize=8,
-        )
-        # ---------------------- plotting data -----------------------------
-        plot_data(
-            x=phase_data,
-            y=mean_voltage_data,
-            names=info_data,
-            title=title,
-            file_name=file_name,
-            save_location=save_location,
-            save=save_fig,
-            show_plot=False,
-        )
-        # ---------------------- Graph stuff -----------------------------
-        
-        plt.xlim(0, 360)
 
-        plt.gca().xaxis.set_major_locator(MultipleLocator(30))
-        plt.gca().tick_params(axis="x", labelsize=12)
+os.makedirs(save_location, exist_ok=True)
 
-        def pi_formatter(x, pos):
-            fraction = Fraction(x / 180).limit_denominator(12)
 
-            if fraction == 0:
-                return r"$0$"
-            elif fraction == 1:
-                return r"$\pi$"
-            elif fraction == -1:
-                return r"$-\pi$"
-            elif fraction.denominator == 1:
-                return rf"${fraction.numerator}\pi$"
-            else:
-                return rf"$\frac{{{fraction.numerator}\pi}}{{{fraction.denominator}}}$"
+# Component tolerances
 
-        plt.gca().xaxis.set_major_formatter(FuncFormatter(pi_formatter))
-        plt.ylim(y_min, y_max)
-        if save_fig:
-            os.makedirs(save_location, exist_ok=True)
-            plt.savefig(f"{save_location}/{file_name}.svg")
+COMPONENT_TOLERANCE = 0.05
+
+
+# True: treat ±5% as a 1-sigma uncertainty.
+
+# False: treat ±5% as a maximum tolerance with a
+
+# rectangular probability distribution (divide by sqrt(3)).
+
+TOLERANCE_IS_1SIGMA = True
+
+
+# ============================================================
+
+# COMPONENT UNCERTAINTY CALCULATIONS
+
+# ============================================================
+
+
+def get_component_x_error(param, nominal_value):
+    """
+
+    Calculates the x-axis value and uncertainty for a component.
+
+
+    For resistors:
+
+        x = 1/R
+
+
+    The uncertainty is calculated using the exact transformed
+
+    limits corresponding to R +/- 5%.
+
+
+    For capacitors:
+
+        x = C
+
+
+    Returns:
+
+        x       : nominal x-axis value
+
+        x_err   : symmetric standard uncertainty for ODR
+
+        x_lower : lower error bar magnitude
+
+        x_upper : upper error bar magnitude
+
+    """
+
+    tolerance = COMPONENT_TOLERANCE
+
+    if param in ("r1", "r2"):
+
+        try:
+            if np.isinf(float(nominal_value)):
+                return 0.0, 0.0, 0.0, 0.0
+        except (TypeError, ValueError, OverflowError):
+            pass
+
+        resistance = data_to_val(nominal_value)
+
+        if np.isinf(float(resistance)):
+            # An infinite resistance corresponds to 1/R = 0.
+            return 0.0, 0.0, 0.0, 0.0
+
+        if resistance <= 0:
+            raise ValueError("Resistance must be positive")
+
+        x = 1 / resistance
+
+        # Exact limits after transforming R +/- 5% into 1/R
+
+        x_min = 1 / (resistance * (1 + tolerance))
+
+        x_max = 1 / (resistance * (1 - tolerance))
+
+        x_lower = x - x_min
+
+        x_upper = x_max - x
+
+    elif param == "c":
+
+        capacitance = data_to_val(nominal_value)
+
+        if capacitance <= 0:
+
+            raise ValueError("Capacitance must be positive")
+
+        x = capacitance
+
+        # Capacitance is plotted directly, so uncertainty is symmetric
+
+        x_lower = tolerance * x
+
+        x_upper = tolerance * x
+
+    else:
+
+        raise ValueError(f"Unknown parameter: {param}")
+
+    # Convert tolerance into standard uncertainty for ODR
+
+    tolerance_factor = 1.0 if TOLERANCE_IS_1SIGMA else 1 / np.sqrt(3)
+
+    x_err = ((x_lower + x_upper) / 2) * tolerance_factor
+
+    return x, x_err, x_lower, x_upper
+
+
+# ============================================================
+
+# ORTHOGONAL DISTANCE REGRESSION
+
+# ============================================================
+
+
+def fit_line_odr(x, y, x_err, y_err=None, steps=200):
+    """
+
+    Performs linear orthogonal distance regression.
+
+
+    Accounts for:
+
+        - Horizontal uncertainties (x_err)
+
+        - Vertical uncertainties (y_err)
+
+
+    If y_err is None, the vertical data are treated as
+
+    unweighted.
+
+
+    Returns:
+
+        x_fit
+
+        y_fit
+
+        gradient
+
+        intercept
+
+        gradient_err
+
+        intercept_err
+
+        r_squared
+
+    """
+
+    x = np.asarray(x, dtype=float)
+
+    y = np.asarray(y, dtype=float)
+
+    x_err = np.asarray(x_err, dtype=float)
+
+    if y_err is not None:
+
+        y_err = np.asarray(y_err, dtype=float)
+
+    def linear_model(beta, x):
+
+        return beta[0] * x + beta[1]
+
+    model = odr.Model(linear_model)
+
+    data = odr.RealData(x, y, sx=x_err, sy=y_err)
+
+    # Initial estimate from ordinary linear regression
+
+    initial_guess = np.polyfit(x, y, 1)
+
+    regression = odr.ODR(data, model, beta0=initial_guess)
+
+    output = regression.run()
+
+    gradient = output.beta[0]
+
+    intercept = output.beta[1]
+
+    # Use unscaled covariance because the supplied uncertainties
+
+    # are being treated as absolute standard uncertainties.
+
+    gradient_err = np.sqrt(output.cov_beta[0, 0])
+
+    intercept_err = np.sqrt(output.cov_beta[1, 1])
+
+    # Generate fitted line
+
+    x_fit = np.linspace(min(x), max(x), steps)
+
+    y_fit = linear_model(output.beta, x_fit)
+
+    # Calculate conventional R squared
+
+    y_pred = linear_model(output.beta, x)
+
+    ss_res = np.sum((y - y_pred) ** 2)
+
+    ss_tot = np.sum((y - np.mean(y)) ** 2)
+
+    r_squared = 1 - ss_res / ss_tot if ss_tot != 0 else np.nan
+
+    return (x_fit, y_fit, gradient, intercept, gradient_err, intercept_err, r_squared)
+
+
+# ============================================================
+
+# LOAD DATA
+
+# ============================================================
+
+
+file_names = os.listdir(folder)
+
+capacitance = file_names
+
+
+voltage_data = []
+
+frequency_data = []
+
+info_data = []
+
+parsed_info = []
+
+
+# Load all data
+
+for c in capacitance:
+
+    if c == "current_mirror":
+
+        continue
+
+    tmp_path = f"{folder}/{c}"
+
+    if not os.path.isdir(tmp_path):
+
+        continue
+
+    subfolders = os.listdir(tmp_path)
+
+    for csv in subfolders:
+
+        if not csv.endswith(".csv"):
+
+            continue
+
+        tmp_path_2 = f"{folder}/{c}/{csv}"
+
+        df = pd.read_csv(tmp_path_2)
+
+        freq_vals = df["Frequency"].values
+
+        volt_vals = df["Voltage data"].values
+
+        filename_no_ext = csv[0:-4]
+
+        frequency_data.append(freq_vals * 1e3)
+
+        voltage_data.append(volt_vals)
+
+        info_data.append(filename_no_ext)
+
+        params = parse_filename(filename_no_ext)
+
+        # Some filename formats cause parse_filename() to return None for infinity.
+        # Restore the explicit R2=infinity value so it remains a valid fixed-R2 group.
+        if filename_has_infinite_r2(filename_no_ext):
+            params["r2"] = np.inf
+
+        parsed_info.append(params)
+
+
+# ============================================================
+
+# STORAGE FOR COMBINED PLOTS
+
+# ============================================================
+
+
+combined_plot_data = {
+    "r1": [],
+    "r2": [],
+    "c": [],
+    "fmin_inv_c": [],
+}
+
+
+# ============================================================
+
+# MAIN PLOTTING FUNCTION
+
+# ============================================================
+
+
+def create_and_save_plot(indices, title, varying_param, filename_out, fixed_param=None):
+
+    if not indices:
+
+        return
+
+    # --------------------------------------------------------
+
+    # Plot setup
+
+    # --------------------------------------------------------
+
+    plt.figure()
+
+    matplot_styles()
+
+    ax = plt.gca()
+
+    max_freq = 0
+
+    # --------------------------------------------------------
+
+    # Storage for combined plots
+
+    # --------------------------------------------------------
+
+    k_o_values = []
+
+    k_err_values = []
+
+    f_min_values = []
+
+    f_min_err_values = []
+
+    x_data_values = []
+
+    x_err_values = []
+
+    x_err_lower_values = []
+
+    x_err_upper_values = []
+
+    # --------------------------------------------------------
+
+    # Plot each line
+
+    # --------------------------------------------------------
+
+    for count, idx in enumerate(indices):
+
+        params = parsed_info[idx]
+
+        # ----------------------------------------------------
+
+        # Determine varying parameter and uncertainty
+
+        # ----------------------------------------------------
+
+        if varying_param == "r1":
+
+            label = f"$R_1$ = {format_val(params['r1'])} "
+
+            x, x_err, x_lower, x_upper = get_component_x_error("r1", params["r1"])
+
+        elif varying_param == "r2":
+
+            label = f"$R_2$ = {format_resistance(params['r2'])} "
+
+            x, x_err, x_lower, x_upper = get_component_x_error("r2", params["r2"])
+
+        elif varying_param == "c":
+
+            label = f"$C$ = {format_val(params['c'])} "
+
+            x, x_err, x_lower, x_upper = get_component_x_error("c", params["c"])
+
+        else:
+
+            label = info_data[idx]
+
+            x = np.nan
+
+            x_err = np.nan
+
+            x_lower = np.nan
+
+            x_upper = np.nan
+
+        x_data_values.append(x)
+
+        x_err_values.append(x_err)
+
+        x_err_lower_values.append(x_lower)
+
+        x_err_upper_values.append(x_upper)
+
+        # ----------------------------------------------------
+
+        # Find slope and fit over region
+
+        # ----------------------------------------------------
+
+        t_min = 10e-7
+
+        error_freq = (
+            t_min * frequency_data[idx] ** 2
+        )  # convert to Hz, standard error prop, 1/t => 1/t^2 dt
+
+        error_voltage = get_voltage_errors(voltage_data[idx], resolution_bits=6)
+
+        x_fit, y_fit, gradient, m_err = finding_slope(
+            voltage_data[idx], frequency_data[idx], error_x=error_voltage, error_y=error_freq
+        )
+
+        # Calculate KO and its uncertainty
+
+        k_o = np.absolute(2 * np.pi * gradient)
+
+        k_err = np.absolute(2 * np.pi * m_err)
+
+        # Minimum frequency and its uncertainty
+
+        f_min = frequency_data[idx][0]
+
+        f_min_err = error_freq[0]
+
+        k_o_values.append(k_o)
+
+        k_err_values.append(k_err)
+
+        f_min_values.append(f_min)
+
+        f_min_err_values.append(f_min_err)
+
+        # ----------------------------------------------------
+
+        # Update legend
+
+        # ----------------------------------------------------
+
+        label += rf", $K_{{O}}$ = {format_sci_err(k_o,k_err,decimals=4)} Hz/V"
+
+        # ----------------------------------------------------
+
+        # Plot original VCO response
+
+        # ----------------------------------------------------
+
+        plt.plot(
+            voltage_data[idx],
+            frequency_data[idx],
+            color=colours[count % len(colours)],
+            label=label,
+            alpha=0.6,
+        )
+
+        plt.plot(x_fit, y_fit, color=colours[count % len(colours)], linestyle="--", alpha=1)
+
+        # ----------------------------------------------------
+
+        # Update maximum frequency
+
+        # ----------------------------------------------------
+
+        if max_freq < max(frequency_data[idx]):
+
+            max_freq = max(frequency_data[idx])
+
+    # --------------------------------------------------------
+
+    # Set styles and axes
+
+    # --------------------------------------------------------
+
+    ax.set_xticks(np.arange(0, 6, 1))
+
+    if max_freq < 200_000:
+
+        ax.set_yticks(np.arange(0, max_freq + 20_000, 20_000))
+
+    else:
+
+        ax.set_yticks(np.arange(0, max_freq + 20_000, 100_000))
+
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y / 1000:g}"))
+
+    plt.ylabel("Frequency (kHz)")
+
+    plt.xlabel("Voltage (V)")
+
+    plt.xlim(left=0)
+
+    plt.ylim(bottom=0)
+
+    plt.title(title)
+
+    plt.legend(fontsize=8)
+
+    plt.tight_layout()
+
+    # --------------------------------------------------------
+
+    # Save / show plot
+
+    # --------------------------------------------------------
+
+    if save_data:
+
+        plt.savefig(os.path.join(save_location, "curves_" + filename_out), dpi=300)
+
+    if show_plots:
+
         plt.show()
+
+    else:
+
+        plt.close()
+
+    # ========================================================
+
+    # STORE DATA FOR COMBINED PLOTS
+
+    # ========================================================
+
+    fixed_params = parsed_info[indices[0]]
+
+    # Asymmetric error bars, stored as a 2 x N array
+
+    x_errors_plot = np.vstack(
+        (np.asarray(x_err_lower_values, dtype=float), np.asarray(x_err_upper_values, dtype=float))
+    )
+
+    # Symmetric uncertainty for ODR
+
+    x_errors_fit = np.asarray(x_err_values, dtype=float)
+
+    # --------------------------------------------------------
+
+    # KO against 1/R1
+
+    # --------------------------------------------------------
+
+    if varying_param == "r1":
+
+        combined_plot_data["r1"].append(
+            {
+                "x": np.asarray(x_data_values, dtype=float),
+                "x_err": x_errors_fit,
+                "x_err_plot": x_errors_plot,
+                "y": np.asarray(k_o_values, dtype=float),
+                "y_err": np.asarray(k_err_values, dtype=float),
+                "label": (
+                    f"R2={format_resistance(fixed_params['r2'])} , "
+                    f"C={format_val(fixed_params['c'])} "
+                ),
+            }
+        )
+
+    # --------------------------------------------------------
+
+    # Minimum frequency against 1/R2
+
+    # --------------------------------------------------------
+
+    elif varying_param == "r2":
+
+        combined_plot_data["r2"].append(
+            {
+                "x": np.asarray(x_data_values, dtype=float),
+                "x_err": x_errors_fit,
+                "x_err_plot": x_errors_plot,
+                "y": np.asarray(f_min_values, dtype=float),
+                "y_err": np.asarray(f_min_err_values, dtype=float),
+                "label": (
+                    f"R1={format_val(fixed_params['r1'])}, " f"C={format_val(fixed_params['c'])}"
+                ),
+            }
+        )
+
+    # --------------------------------------------------------
+
+    # Inverse KO against capacitance
+
+    # --------------------------------------------------------
+
+    elif varying_param == "c":
+
+        k_values = np.asarray(k_o_values, dtype=float)
+        k_errors = np.asarray(k_err_values, dtype=float)
+
+        # ----------------------------------------------------
+        # Inverse KO against capacitance
+        # ----------------------------------------------------
+
+        inverse_k_values = np.divide(
+            1,
+            k_values,
+            out=np.full_like(k_values, np.inf),
+            where=k_values != 0,
+        )
+
+        inverse_k_errors = np.divide(
+            k_errors,
+            k_values**2,
+            out=np.full_like(k_errors, np.inf),
+            where=k_values != 0,
+        )
+
+        combined_plot_data["c"].append(
+            {
+                "x": np.asarray(x_data_values, dtype=float),
+                "x_err": x_errors_fit,
+                "x_err_plot": x_errors_plot,
+                "y": inverse_k_values,
+                "y_err": inverse_k_errors,
+                "label": (
+                    f"R1={format_val(fixed_params['r1'])}, "
+                    f"R2={format_resistance(fixed_params['r2'])}"
+                ),
+            }
+        )
+
+        # ----------------------------------------------------
+        # f_min against inverse capacitance (1/C)
+        # ----------------------------------------------------
+
+        capacitance_values = np.asarray(x_data_values, dtype=float)
+        f_min_array = np.asarray(f_min_values, dtype=float)
+        f_min_err_array = np.asarray(f_min_err_values, dtype=float)
+
+        # Transform C to 1/C.
+        inverse_c = 1 / capacitance_values
+
+        # Transform the exact C +/- tolerance limits into 1/C limits.
+        inverse_c_min = 1 / (capacitance_values * (1 + COMPONENT_TOLERANCE))
+        inverse_c_max = 1 / (capacitance_values * (1 - COMPONENT_TOLERANCE))
+
+        inverse_c_lower = inverse_c - inverse_c_min
+        inverse_c_upper = inverse_c_max - inverse_c
+
+        # Symmetric standard uncertainty used by ODR.
+        tolerance_factor = 1.0 if TOLERANCE_IS_1SIGMA else 1 / np.sqrt(3)
+        inverse_c_err = ((inverse_c_lower + inverse_c_upper) / 2) * tolerance_factor
+
+        # Keep f_min (not 1/f_min) as the vertical data.
+        combined_plot_data["fmin_inv_c"].append(
+            {
+                "x": inverse_c,
+                "x_err": inverse_c_err,
+                "x_err_plot": np.vstack((inverse_c_lower, inverse_c_upper)),
+                "y": f_min_array,
+                "y_err": f_min_err_array,
+                "label": (
+                    f"R1={format_val(fixed_params['r1'])}, "
+                    f"R2={format_resistance(fixed_params['r2'])}"
+                ),
+            }
+        )
+
+
+# ============================================================
+
+# COMBINED PLOTTING FUNCTION
+
+# ============================================================
+
+
+def create_combined_plot(param, ylabel, xlabel, title, filename):
+
+    datasets = combined_plot_data[param]
+
+    if not datasets:
+
+        return
+
+    plt.figure()
+
+    matplot_styles()
+
+    ax = plt.gca()
+
+    # --------------------------------------------------------
+
+    # Plot each dataset
+
+    # --------------------------------------------------------
+
+    for i, data in enumerate(datasets):
+
+        x = data["x"]
+
+        y = data["y"]
+
+        # Horizontal uncertainties
+
+        x_err = data["x_err"]
+
+        x_err_plot = data["x_err_plot"]
+
+        # Vertical uncertainties
+
+        y_err = data.get("y_err", None)
+
+        # ----------------------------------------------------
+
+        # Remove invalid values
+
+        # ----------------------------------------------------
+
+        valid = (
+            np.isfinite(x)
+            & np.isfinite(y)
+            & np.isfinite(x_err)
+            & (x_err > 0)
+            & np.all(np.isfinite(x_err_plot), axis=0)
+        )
+
+        if y_err is not None:
+
+            valid &= np.isfinite(y_err) & (y_err > 0)
+
+        x = x[valid]
+
+        y = y[valid]
+
+        x_err = x_err[valid]
+
+        x_err_plot = x_err_plot[:, valid]
+
+        if y_err is not None:
+
+            y_err = y_err[valid]
+
+        if len(x) == 0:
+
+            continue
+
+        colour = colours[i % len(colours)]
+
+        # ----------------------------------------------------
+
+        # Plot experimental data with error bars
+
+        # ----------------------------------------------------
+
+        plt.errorbar(
+            x,
+            y,
+            xerr=x_err_plot,
+            yerr=y_err,
+            marker="x",
+            linestyle="none",
+            color=colour,
+            alpha=0.8,
+            capsize=3,
+        )
+
+        # ----------------------------------------------------
+
+        # Orthogonal distance regression
+
+        # ----------------------------------------------------
+
+        r_squared = np.nan
+
+        gradient = np.nan
+
+        gradient_err = np.nan
+
+        # ODR requires positive x uncertainties. Points such as R2=infinity
+        # have 1/R2 = 0 exactly, so they are plotted but left out of the fit.
+        fit_valid = x_err > 0
+        if len(x) >= 2 and np.count_nonzero(fit_valid) >= 2 and len(np.unique(x[fit_valid])) >= 2:
+
+            try:
+                fit_y_err = y_err[fit_valid] if y_err is not None else None
+                x_fit, y_fit, gradient, intercept, gradient_err, intercept_err, r_squared = (
+                    fit_line_odr(x[fit_valid], y[fit_valid], x_err[fit_valid], fit_y_err)
+                )
+
+                plt.plot(x_fit, y_fit, linestyle="--", color=colour, alpha=0.8)
+
+            except (RuntimeError, ValueError, np.linalg.LinAlgError, TypeError) as e:
+
+                print(f"Fit failed for {data['label']}: {e}")
+
+        # ----------------------------------------------------
+
+        # Determine gradient units
+
+        # ----------------------------------------------------
+
+        if param == "r1":
+
+            m_unit = r"Hz $\Omega$/V"
+
+        elif param == "r2":
+
+            m_unit = r"Hz $\Omega$"
+
+        elif param == "fmin_inv_c":
+
+            # The fitted gradient is (Hz) / (F^-1) = Hz F.
+            m_unit = r"Hz F"
+
+        else:
+
+            m_unit = r"V/(Hz F)"
+
+        # ----------------------------------------------------
+
+        # Create legend
+
+        # ----------------------------------------------------
+
+        if np.isfinite(gradient) and np.isfinite(gradient_err):
+
+            gradient_text = f"{format_sci_err(gradient,gradient_err, decimals=3)}"
+
+        else:
+
+            gradient_text = "Fit unavailable"
+
+        legend_label = data["label"] + f", m = {gradient_text} {m_unit}" + f", R² = {r_squared:.4f}"
+
+        plt.plot([], [], color=colour, marker="x", linestyle="--", label=legend_label)
+
+    # --------------------------------------------------------
+
+    # Axis formatting
+
+    # --------------------------------------------------------
+
+    # Format frequency axes from Hz to kHz (visual only)
+
+    if param in ("r2", "fmin_inv_c"):
+
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1000:g}"))
+
+        ylabel = r"$f_{\min}$ (kHz)"
+
+    plt.ylabel(ylabel)
+
+    plt.xlabel(xlabel)
+
+    plt.title(title)
+
+    plt.xlim(left=0)
+
+    plt.ylim(bottom=0)
+
+    plt.legend(fontsize=7)
+
+    plt.tight_layout()
+
+    # --------------------------------------------------------
+
+    # Save / show
+
+    # --------------------------------------------------------
+
+    if save_data:
+
+        plt.savefig(os.path.join(save_location, filename), dpi=300)
+
+    if show_plots:
+
+        plt.show()
+
+    else:
+
+        plt.close()
+
+
+# ============================================================
+
+# GENERATE PLOTS
+
+# ============================================================
+
+
+print("Generating plots...")
+
+
+# ------------------------------------------------------------
+
+# 1. Fixed R1 values for C = 1000pF (varying R2)
+
+# ------------------------------------------------------------
+
+
+r1_values = set(p["r1"] for p in parsed_info if p["c"] == "1000pf" and p["r1"] is not None)
+
+
+for r1 in r1_values:
+
+    idx_list = [i for i, p in enumerate(parsed_info) if p["c"] == "1000pf" and p["r1"] == r1]
+
+    if idx_list:
+
+        create_and_save_plot(
+            idx_list,
+            f"VCO Response ($C=1$ nF, $R_1=${format_val(r1)})",
+            "r2",
+            f"Fixed_R1_{r1}_C_1000pF.svg",
+        )
+
+
+# ------------------------------------------------------------
+
+# 2. Fixed R2 values for C = 1000pF (varying R1)
+
+# ------------------------------------------------------------
+
+
+r2_values = set(p["r2"] for p in parsed_info if p["c"] == "1000pf" and p["r2"] is not None)
+
+
+for r2 in r2_values:
+
+    idx_list = [i for i, p in enumerate(parsed_info) if p["c"] == "1000pf" and p["r2"] == r2]
+
+    if idx_list:
+
+        create_and_save_plot(
+            idx_list,
+            f"VCO Response ($C=1$ nF, $R_2=${format_resistance(r2)})",
+            "r1",
+            f"Fixed_R2_{r2}_C_1000pF.svg",
+        )
+
+
+# ------------------------------------------------------------
+
+# 3. All unique R1, R2 combinations (varying C)
+
+# ------------------------------------------------------------
+
+
+r1_r2_pairs = set(
+    (p["r1"], p["r2"]) for p in parsed_info if p["r1"] is not None and p["r2"] is not None
+)
+
+
+for r1, r2 in r1_r2_pairs:
+
+    idx_list = [i for i, p in enumerate(parsed_info) if p["r1"] == r1 and p["r2"] == r2]
+
+    # Include every group; ODR is only performed when there are at least two distinct C values.
+
+    if len(idx_list) >= 1:
+
+        create_and_save_plot(
+            idx_list,
+            f"VCO Response ($R_1=${format_val(r1)}, $R_2=${format_resistance(r2)})",
+            "c",
+            f"Fixed_R1_{r1}_R2_{r2}_Varying_C.svg",
+            fixed_param=[data_to_val(r1), (np.inf if np.isinf(float(r2)) else data_to_val(r2))],
+        )
+
+
+# ============================================================
+
+# COMBINED PLOTS
+
+# ============================================================
+
+
+# ------------------------------------------------------------
+
+# 1. KO against 1/R1
+
+# ------------------------------------------------------------
+
+
+create_combined_plot(
+    param="r1",
+    ylabel=r"$K_O$ (Hz/V)",
+    xlabel=r"$1/R_1$ ($\Omega^{-1}$)",
+    title=r"$K_O$ vs $1/R_1$",
+    filename="Combined_KO_vs_invR1.svg",
+)
+
+
+# ------------------------------------------------------------
+
+# 2. Minimum frequency against 1/R2
+
+# ------------------------------------------------------------
+
+
+create_combined_plot(
+    param="r2",
+    ylabel=r"$f_{\min}$ (Hz)",
+    xlabel=r"$1/R_2$ ($\Omega^{-1}$)",
+    title=r"$f_{\min}$ vs $1/R_2$",
+    filename="Combined_fmin_vs_invR2.svg",
+)
+
+
+# ------------------------------------------------------------
+
+# 3. Inverse KO against capacitance
+
+# ------------------------------------------------------------
+
+
+create_combined_plot(
+    param="c",
+    ylabel=r"$1/K_O$ (V/Hz)",
+    xlabel=r"$C$ (F)",
+    title=r"$1/K_O$ vs $C$",
+    filename="Combined_invKO_vs_C.svg",
+)
+
+
+# ------------------------------------------------------------
+# 4. Minimum frequency against inverse capacitance
+# ------------------------------------------------------------
+
+create_combined_plot(
+    param="fmin_inv_c",
+    ylabel=r"$f_{\min}$ (kHz)",
+    xlabel=r"$1/C$ (F$^{-1}$)",
+    title=r"$f_{\min}$ vs $1/C$",
+    filename="Combined_fmin_vs_invC.svg",
+)
+
+# ============================================================
+
+# FINISHED
+
+# ============================================================
+
+
+print("All plots completed.")
+
+
+if save_data:
+
+    print(f"Plots saved to: {save_location}")
+
+else:
+
+    print("save_data is False, so plots were not saved.")

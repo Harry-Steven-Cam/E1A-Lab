@@ -19,7 +19,7 @@ save_location = (
     r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.5/RCRcombos"
 )
 
-save_data = True
+save_data = False
 show_plots = False
 
 os.makedirs(save_location, exist_ok=True)
@@ -226,9 +226,8 @@ combined_plot_data = {
     "r1": [],
     "r2": [],
     "c": [],
-    "inv_fmin_c": [],
+    "fmin_inv_c": [],
 }
-
 # ============================================================
 # MAIN PLOTTING FUNCTION
 # ============================================================
@@ -518,35 +517,48 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
             }
         )
         # ----------------------------------------------------
-        # 1/f_min against capacitance
+        # f_min against 1/C
         # ----------------------------------------------------
+
+        capacitance_values = np.asarray(x_data_values, dtype=float)
 
         f_min_array = np.asarray(f_min_values, dtype=float)
         f_min_err_array = np.asarray(f_min_err_values, dtype=float)
 
-        # Calculate inverse minimum frequency
-        inverse_f_min = np.divide(
-            1,
-            f_min_array,
-            out=np.full_like(f_min_array, np.nan),
-            where=f_min_array > 0
+        # Convert capacitance to inverse capacitance
+        inverse_c = 1 / capacitance_values
+
+        # Calculate exact transformed uncertainty limits
+        inverse_c_min = 1 / (
+            capacitance_values * (1 + COMPONENT_TOLERANCE)
         )
 
-        # Propagate uncertainty: Δ(1/f) = Δf / f²
-        inverse_f_min_err = np.divide(
-            f_min_err_array,
-            f_min_array**2,
-            out=np.full_like(f_min_array, np.nan),
-            where=f_min_array > 0
+        inverse_c_max = 1 / (
+            capacitance_values * (1 - COMPONENT_TOLERANCE)
         )
 
-        combined_plot_data["inv_fmin_c"].append(
+        inverse_c_lower = inverse_c - inverse_c_min
+        inverse_c_upper = inverse_c_max - inverse_c
+
+        # Standard uncertainty for ODR
+        tolerance_factor = (
+            1.0 if TOLERANCE_IS_1SIGMA else 1 / np.sqrt(3)
+        )
+
+        inverse_c_err = (
+            (inverse_c_lower + inverse_c_upper) / 2
+        ) * tolerance_factor
+
+        # Store data
+        combined_plot_data["fmin_inv_c"].append(
             {
-                "x": np.asarray(x_data_values, dtype=float),
-                "x_err": x_errors_fit,
-                "x_err_plot": x_errors_plot,
-                "y": inverse_f_min,
-                "y_err": inverse_f_min_err,
+                "x": inverse_c,
+                "x_err": inverse_c_err,
+                "x_err_plot": np.vstack(
+                    (inverse_c_lower, inverse_c_upper)
+                ),
+                "y": f_min_array,
+                "y_err": f_min_err_array,
                 "label": (
                     f"R1={format_val(fixed_params['r1'])}, "
                     f"R2={format_val(fixed_params['r2'])}"
@@ -597,7 +609,7 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
             np.isfinite(x)
             & np.isfinite(y)
             & np.isfinite(x_err)
-            & (x_err > 0)
+            & (x_err >= 0)
             & np.all(np.isfinite(x_err_plot), axis=0)
         )
 
@@ -669,8 +681,9 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
         elif param == "r2":
             m_unit = r"Hz $\Omega$"
 
-        elif param == "inv_fmin_c":
-            m_unit = r"s/F"
+        elif param == "fmin_inv_c":
+
+            m_unit = r"Hz F"
 
         else:
             m_unit = r"V/(Hz F)"
@@ -695,7 +708,7 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
     # Axis formatting
     # --------------------------------------------------------
     # Format frequency axes from Hz to kHz (visual only)
-    if param == "r2":
+    if param in ("r2", "fmin_inv_c"):
         ax.yaxis.set_major_formatter(
             plt.FuncFormatter(lambda y, _: f"{y / 1000:g}")
         )
@@ -842,15 +855,15 @@ create_combined_plot(
 )
 
 # ------------------------------------------------------------
-# 4. Inverse minimum frequency against capacitance
+# f_min against inverse capacitance
 # ------------------------------------------------------------
-
+show_plots = True
 create_combined_plot(
-    param="inv_fmin_c",
-    ylabel=r"$1/f_{\min}$ (s)",
-    xlabel=r"$C$ (F)",
-    title=r"$1/f_{\min}$ vs $C$",
-    filename="Combined_inv_fmin_vs_C.svg",
+    param="fmin_inv_c",
+    ylabel=r"$f_{\min}$ (Hz)",
+    xlabel=r"$1/C$ (F$^{-1}$)",
+    title=r"$f_{\min}$ vs $1/C$",
+    filename="Combined_fmin_vs_invC.svg",
 )
 # ============================================================
 # FINISHED

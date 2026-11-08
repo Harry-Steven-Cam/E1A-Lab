@@ -36,7 +36,7 @@ ratio_max = ratio_base + threshold
 
 # AWG frequency limits (kHz)
 freq_min,freq_max = 10,30
-ignore_range = ["60.0(kHz)","120.0(kHz)","240.0(kHz)"]
+ignore_range = ["60.0(kHz)","60.0(kHz)","120.0(kHz)","240.0(kHz)"]
 
 #for 7th harmonic
 #freq_min,freq_max = 100,120

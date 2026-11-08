@@ -19,7 +19,7 @@ save_location = (
     r"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/analysis_images/6.5/RCRcombos"
 )
 
-save_data = True
+save_data = False
 show_plots = False
 
 os.makedirs(save_location, exist_ok=True)
@@ -80,7 +80,7 @@ def get_component_x_error(param, nominal_value):
     elif param == "c":
 
         capacitance = data_to_val(nominal_value)
-
+        tolerance=0.1
         if capacitance <= 0:
             raise ValueError("Capacitance must be positive")
 
@@ -226,7 +226,7 @@ combined_plot_data = {
     "r1": [],
     "r2": [],
     "c": [],
-    "inv_fmin_c": [],
+    "fmin_inv_c": [],
 }
 
 # ============================================================
@@ -346,21 +346,6 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
 
             C = data_to_val(params["c"])
 
-            inverse_fmin = 1 / f_min
-
-            # Propagate uncertainty: Δ(1/f) = Δf / f²
-            inverse_fmin_err = f_min_err / f_min**2
-
-            inverse_fmin_vs_c_data.append({
-                "C": C,
-                "C_err": COMPONENT_TOLERANCE * C,
-                "inverse_fmin": inverse_fmin,
-                "inverse_fmin_err": inverse_fmin_err,
-                "label": (
-                    f"R1={format_val(params['r1'])}, "
-                    f"R2={format_val(params['r2'])}"
-                )
-            })
 
         # ----------------------------------------------------
         # Update legend
@@ -518,41 +503,49 @@ def create_and_save_plot(indices, title, varying_param, filename_out, fixed_para
             }
         )
         # ----------------------------------------------------
-        # 1/f_min against capacitance
+        # f_min against 1/C
         # ----------------------------------------------------
+
+        C = np.asarray(x_data_values, dtype=float)
 
         f_min_array = np.asarray(f_min_values, dtype=float)
         f_min_err_array = np.asarray(f_min_err_values, dtype=float)
 
-        # Calculate inverse minimum frequency
-        inverse_f_min = np.divide(
-            1,
-            f_min_array,
-            out=np.full_like(f_min_array, np.nan),
-            where=f_min_array > 0
+        # Convert capacitance to inverse capacitance
+        inverse_C = 1 / C
+
+        # Calculate asymmetric uncertainties
+        inverse_C_lower = inverse_C - 1 / (
+            C * (1 + COMPONENT_TOLERANCE)
         )
 
-        # Propagate uncertainty: Δ(1/f) = Δf / f²
-        inverse_f_min_err = np.divide(
-            f_min_err_array,
-            f_min_array**2,
-            out=np.full_like(f_min_array, np.nan),
-            where=f_min_array > 0
+        inverse_C_upper = (
+            1 / (C * (1 - COMPONENT_TOLERANCE)) - inverse_C
         )
 
-        combined_plot_data["inv_fmin_c"].append(
-            {
-                "x": np.asarray(x_data_values, dtype=float),
-                "x_err": x_errors_fit,
-                "x_err_plot": x_errors_plot,
-                "y": inverse_f_min,
-                "y_err": inverse_f_min_err,
-                "label": (
-                    f"R1={format_val(fixed_params['r1'])}, "
-                    f"R2={format_val(fixed_params['r2'])}"
-                ),
-            }
+        # Symmetric uncertainty for ODR
+        tolerance_factor = (
+            1.0 if TOLERANCE_IS_1SIGMA else 1 / np.sqrt(3)
         )
+
+        inverse_C_err = (
+            (inverse_C_lower + inverse_C_upper) / 2
+        ) * tolerance_factor
+
+        combined_plot_data["fmin_inv_c"].append({
+            "x": inverse_C,
+            "x_err": inverse_C_err,
+            "x_err_plot": np.vstack((
+                inverse_C_lower,
+                inverse_C_upper
+            )),
+            "y": f_min_array,
+            "y_err": f_min_err_array,
+            "label": (
+                f"R1={format_val(fixed_params['r1'])}, "
+                f"R2={format_val(fixed_params['r2'])}"
+            ),
+        })
 
 
 # ============================================================
@@ -597,13 +590,13 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
             np.isfinite(x)
             & np.isfinite(y)
             & np.isfinite(x_err)
-            & (x_err > 0)
+            & (x_err >= 0)
             & np.all(np.isfinite(x_err_plot), axis=0)
         )
 
         if y_err is not None:
 
-            valid &= np.isfinite(y_err) & (y_err > 0)
+            valid &= np.isfinite(y_err) & (y_err >= 0)
 
         x = x[valid]
         y = y[valid]
@@ -641,19 +634,52 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
         # ----------------------------------------------------
 
         r_squared = np.nan
-
         gradient = np.nan
         gradient_err = np.nan
 
-        if len(x) >= 2 and len(np.unique(x)) >= 2:
+        # Only use points with positive uncertainties for ODR
+        fit_valid = x_err > 0
+
+        if y_err is not None:
+            fit_valid &= y_err > 0
+
+        # Extract points suitable for fitting
+        fit_x = x[fit_valid]
+        fit_y = y[fit_valid]
+        fit_x_err = x_err[fit_valid]
+
+        if y_err is not None:
+            fit_y_err = y_err[fit_valid]
+        else:
+            fit_y_err = None
+
+        # Perform fit if at least two valid points exist
+        if len(fit_x) >= 2 and len(np.unique(fit_x)) >= 2:
 
             try:
 
-                x_fit, y_fit, gradient, intercept, gradient_err, intercept_err, r_squared = (
-                    fit_line_odr(x, y, x_err, y_err)
+                (
+                    x_fit,
+                    y_fit,
+                    gradient,
+                    intercept,
+                    gradient_err,
+                    intercept_err,
+                    r_squared,
+                ) = fit_line_odr(
+                    fit_x,
+                    fit_y,
+                    fit_x_err,
+                    fit_y_err
                 )
 
-                plt.plot(x_fit, y_fit, linestyle="--", color=colour, alpha=0.8)
+                plt.plot(
+                    x_fit,
+                    y_fit,
+                    linestyle="--",
+                    color=colour,
+                    alpha=0.8
+                )
 
             except (RuntimeError, ValueError, np.linalg.LinAlgError, TypeError) as e:
 
@@ -669,8 +695,8 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
         elif param == "r2":
             m_unit = r"Hz $\Omega$"
 
-        elif param == "inv_fmin_c":
-            m_unit = r"s/F"
+        elif param == "fmin_inv_c":
+            m_unit = r"Hz F"
 
         else:
             m_unit = r"V/(Hz F)"
@@ -695,11 +721,11 @@ def create_combined_plot(param, ylabel, xlabel, title, filename):
     # Axis formatting
     # --------------------------------------------------------
     # Format frequency axes from Hz to kHz (visual only)
-    if param == "r2":
-        ax.yaxis.set_major_formatter(
-            plt.FuncFormatter(lambda y, _: f"{y / 1000:g}")
-        )
-        ylabel = r"$f_{\min}$ (kHz)"
+        if param == "r2":
+            ax.yaxis.set_major_formatter(
+                plt.FuncFormatter(lambda y, _: f"{y / 1000:g}")
+            )
+            ylabel = r"$f_{\min}$ (kHz)"
 
     plt.ylabel(ylabel)
     plt.xlabel(xlabel)
@@ -844,13 +870,14 @@ create_combined_plot(
 # ------------------------------------------------------------
 # 4. Inverse minimum frequency against capacitance
 # ------------------------------------------------------------
-
+show_plots = True
+save_data=True
 create_combined_plot(
-    param="inv_fmin_c",
-    ylabel=r"$1/f_{\min}$ (s)",
-    xlabel=r"$C$ (F)",
-    title=r"$1/f_{\min}$ vs $C$",
-    filename="Combined_inv_fmin_vs_C.svg",
+    param="fmin_inv_c",
+    ylabel=r"$f_{\min}$ (Hz)",
+    xlabel=r"$1/C$ (F$^{-1}$)",
+    title=r"$f_{\min}$ vs $1/C$",
+    filename="Combined_fmin_vs_invC.svg",
 )
 # ============================================================
 # FINISHED

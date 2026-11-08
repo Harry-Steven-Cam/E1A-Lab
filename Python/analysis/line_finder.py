@@ -69,7 +69,6 @@ def get_voltage_errors(voltage_data, voltage_window=10.0, resolution_bits=8):
     voltage_errors = np.full_like(voltage_data, fill_value=sigma_v, dtype=float)
     return voltage_errors
 
-
 def finding_slope(
     x, y, lower_percentile=0.1, upper_percentile=0.95, error_x=None, error_y=None
 ):

@@ -12,7 +12,7 @@ save_location = (
     r"C:/Users/harry/Desktop/university work/year 3/E1A-lab/analysis_images/6.5/current_mirror"
 )
 
-save_data = True
+save_data = False
 show_plot = True
 
 file_names = os.listdir(folder)
@@ -174,7 +174,7 @@ for i in range(len(info_data)):
     )
     avg_I_in_err=np.mean(I_in_error)
     ax2.axhline(y=0, color="black", linewidth=1.5)
-    ax2.axhline(y=avg_I_in,label=rf"Measured current in = {format_sci_err(avg_I_in,avg_I_in_err)}A",color=colours[1])
+    ax2.axhline(y=avg_I_in,label=rf"Measured current in = {format_sci_err(avg_I_in,avg_I_in_err, decimals = 1)}A",color=colours[1])
     # Mean currents
     I_cap = np.mean(capacitor_current)
 

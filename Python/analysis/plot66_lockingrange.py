@@ -10,7 +10,7 @@ from line_finder import *
 PC = 2
 save_data = True
 show_plot = True
-threshold = 0.02
+threshold = 0.002
 folder = rf"./data/6.6/PC{PC}/RCvary"
 save_location = rf"./analysis_images/6.6/PC{PC}/RCvary"
 
@@ -32,7 +32,9 @@ ratio_max = ratio_base + threshold
 
 # AWG frequency limits (kHz)
 freq_min, freq_max = 10, 30
-ignore_range = ["60.0(kHz)", "120.0(kHz)", "240.0(kHz)"]
+ignore_range = ["f0.0(kHz)","60.0(kHz)", "120.0(kHz)", "240.0(kHz)"]
+
+
 
 # for 7th harmonic
 #freq_min,freq_max = 40,60
@@ -180,7 +182,7 @@ axes2[0].set_ylim(0, 100)
 
 
 # Graph 2: Frequency range within ratio band
-axes2[1].plot(ln_fc, frequency_ranges, marker="x", linestyle="none")
+axes2[1].plot(ln_fc, percentage_values*(freq_max-freq_min)/100, marker="x", linestyle="none")
 
 axes2[1].set_xlabel(r"$\ln(f_c / \mathrm{Hz})$")
 axes2[1].set_ylabel("AWG frequency lock range (kHz)")
@@ -201,7 +203,7 @@ plt.tight_layout()
 
 # Save figure separately
 if save_data:
-    file_path = os.path.join(save_location, f"ratio_band_vs_noise_PC{PC}_ratio={ratio_base}.svg")
+    file_path = os.path.join(save_location, f"ratio_band_vs_RCvary_PC{PC}_ratio={ratio_base}.svg")
     plt.savefig(file_path, dpi=300, bbox_inches="tight")
     print(f"Saved figure to {file_path}")
 

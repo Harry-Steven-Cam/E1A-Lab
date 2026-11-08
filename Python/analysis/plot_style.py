@@ -67,10 +67,10 @@ def matplot_styles(
             "legend.loc": "best",
         }
     )
-    ax = plt.gca()
+    '''ax = plt.gca()
     if unit_start != unit_end:
         ax.set_xticks(np.arange(unit_start, unit_end, unit_jump))
-    ax.set_box_aspect(9 / 16)
+    ax.set_box_aspect(9 / 16)'''
 
 
 def format_sci(value, decimals=2):
@@ -147,6 +147,8 @@ def parse_filename(filename):
             params["r2"] = p[3:]
         elif p.startswith("fc="):
             params["fc"] = p[3:]
+        elif p.startswith("f="):
+            params["f="] = p[2:]
     return params
 
 

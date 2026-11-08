@@ -8,8 +8,8 @@ from line_finder import *
 
 # Folder containing CSV files
 PC=2
-save_data=True
-show_plot=False
+save_data=False
+show_plot=True
 folder = rf"./data/6.6/PC{PC}/RCvary"
 file_names = sorted([f for f in os.listdir(folder) if f.lower().endswith(".csv")])
 save_location=rf"./analysis_images/6.6/PC{PC}/RCvary"

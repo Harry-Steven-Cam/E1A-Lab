@@ -18,7 +18,7 @@ from line_finder import freqFinder  # <-- change 'fitting' to whatever your seco
 # SETTINGS
 # ============================================================
 
-PC = 2
+PC = 1
 save_plots = True
 show_plots = False
 folder = rf"C:/Users/harry/Desktop/university work/year 3/E1A-Lab/data/7/PC{PC}"
@@ -210,6 +210,7 @@ def propagate(grad, cov):
 # ============================================================
 # MAIN ANALYSIS OF ONE FILE
 # ============================================================
+t_data=[]
 def analyse_file(path):
     """
     Full pipeline for one 'Turn_on' csv:
@@ -229,12 +230,18 @@ def analyse_file(path):
 
     df = pd.read_csv(path)
     t_all = df["time"].to_numpy()
+    t_data.append(t_all)
     awg = df["awg_out"].to_numpy()
     pll = df["pll_out"].to_numpy()
 
     # --- step location; t is now 'time after step' ---
     t0 = find_step_time(t_all, awg)
     post = t_all >= t0
+        # pre-step data on the same 'time after step' axis (t < 0); used only for plotting,
+    # so it never enters the ripple averaging or the fit
+    pre = t_all < t0
+    t_neg = t_all[pre] - t0
+    v_neg = pll[pre]
     t = t_all[post] - t0
     v = pll[post]
     v_pre = np.mean(pll[t_all < t0]) if np.any(t_all < t0) else np.nan  # voltage before turn-on
@@ -341,6 +348,14 @@ def analyse_file(path):
         2, 1, sharex=True, figsize=(8, 6), gridspec_kw={"height_ratios": [3, 1]}
     )
     ax.plot(t, v, color=colours[0], lw=0.8, alpha=0.5, label="Experimental")
+    if len(t_neg) > 0:
+        ax.plot(t_neg, v_neg, color=colours[0], lw=0.8, alpha=0.5)   # same style as the post-step raw trace
+        # ripple-averaged pre-step trace: the same exact-T_r boxcar, applied to the pre-step segment only
+        # (it must not straddle the step); returns empty arrays if the segment is shorter than T_r
+        t_na, v_na = boxcar_average(t_neg, v_neg, T_r)
+        if len(t_na) > 0:
+            ax.plot(t_na, v_na, color=colours[2], lw=1.5)
+        ax.axvline(0, color="grey", ls=":", lw=1)                    # marks the step
     ax.plot(t_a, v_a, color=colours[2], lw=1.5, label=f"Ripple-averaged ($T_r$ = {T_r*1e6:.1f} µs)")
     ax.plot(
         t_f, func(t_f, *popt), color=colours[1], ls="--", lw=1.8, label=f"{model.capitalize()} fit"
